@@ -1,82 +1,40 @@
-import inspect
-
-import pandas as pd
-from sqlalchemy import and_
-from sqlalchemy.ext.hybrid import hybrid_property
-from sqlalchemy.orm import sessionmaker
+from crmsync.config import SyncConfig
+from database.services.query import QueryService
 from tqdm import tqdm
 
-from crmsync.api.client import PolicyAssembler
-from crmsync.config.config import SyncConfig
+from syncer.policy_assembler import PolicyAssembler
 from crmsync.config.logging import setup_logging
+
+
+from database.unit_of_work import UnitOfWork
+from sqlalchemy.orm import sessionmaker
 from crmsync.database.engine import get_engine
-from crmsync.database.unit_of_work import UnitOfWork
-from crmsync.models.vtigercrm_contactcf import VTigerContactsCF
-from crmsync.models.vtigercrm_contactdetails import VTigerContactDetails
-from crmsync.models.vtigercrm_crmentity import VTigerCRMEntity
-from crmsync.models.vtigercrm_salesorder import VTigerSalesOrder
-from crmsync.models.vtigercrm_salesordercf import VTigerSalesOrderCF
+
 
 
 class Syncer:
     def __init__(self):
-        if not get_engine():
+        engine = get_engine()
+        
+        if not engine:
             return False
-
-        self.unit_of_work = UnitOfWork(lambda: sessionmaker(bind=get_engine())())
+        
         self.config = SyncConfig()
+        self.query_service = QueryService(self.config)
+        self.unit_of_work = UnitOfWork(lambda: sessionmaker(bind=engine)())
 
     def sync(self):
         try:
-            logger = setup_logging()
-            logger.info("Syncing data...")
-            joins = [
-                (VTigerSalesOrder, VTigerSalesOrderCF.salesorderid == VTigerSalesOrder.salesorderid),
-                (VTigerContactsCF, VTigerSalesOrder.contactid == VTigerContactsCF.contactid),
-                (
-                    VTigerCRMEntity,
-                    and_(VTigerSalesOrder.salesorderid == VTigerCRMEntity.crmid, VTigerCRMEntity.deleted == 0),
-                ),
-                (VTigerContactDetails, VTigerSalesOrder.contactid == VTigerContactDetails.contactid),
-            ]
-
-            def get_dynamic_columns():
-                # Recorre los miembros de VTigerSalesOrderCF y recoge aquellos que sean propiedades híbridas
-                # y cuyo nombre comience por "gender_" o "ssn_"
-                return [
-                    member for member in inspect.getmembers(VTigerSalesOrderCF) if isinstance(member, hybrid_property)
-                ]
-
-            dynamic_columns = [
-                getattr(VTigerSalesOrderCF, key)
-                for key, value in VTigerSalesOrderCF.__dict__.items()
-                if isinstance(value, hybrid_property)
-            ]
-
             with self.unit_of_work as uow:
-                base_query = uow.query(
-                    *dynamic_columns,
-                    VTigerSalesOrderCF,
-                    VTigerContactsCF,
-                ).select_from(VTigerSalesOrderCF)
-
-                # Aplicar los JOINs de forma recursiva
-                query = self.recursive_join(base_query, joins)
-
-                # Aplicar los filtros según la lógica original
-                query = (
-                    query.filter(VTigerSalesOrderCF.cf_2141.notin_(['Cancelación', 'Prospecto']))
-                    .filter(VTigerSalesOrderCF.cf_2059 >= '2025-01-01')
-                    .filter(VTigerSalesOrderCF.cf_2067 != 'Otro Broker')
-                    .limit(10)
-                )
-
-                # Ejecutar la consulta y mostrar los resultados
-                df = pd.read_sql(query.statement, uow.bind)
+                logger = setup_logging()
+                version = self.query_service.validate_connection(uow)
+                logger.info(f"Successfully connected to VTigerCRM. Engine version: {version}")
+                
+                df = self.query_service.fetch_records(uow)
 
                 for _, row in tqdm(df.iterrows(), total=df.shape[0]):
                     row_filter = row[row != '']
-                    PolicyAssembler(row_filter)
+                    PolicyAssembler(self.config, row_filter)
         except Exception as e:
             print(f"Error: {e}")
             return False
