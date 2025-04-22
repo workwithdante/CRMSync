@@ -14,10 +14,11 @@ class ERPNextClient:
             cls._instance = super().__new__(cls)
         return cls._instance
 
-    def __init__(self, host_api):
+    def __init__(self, endpoint_host, endpoint_port):
         if hasattr(self, 'host_api'):
             return
-        self.host_api = host_api.rstrip('/')
+        self.endpoint_host = endpoint_host
+        self.endpoint_port = endpoint_port
         self.api_key = None
         self.api_secret = None
         self.session = requests.Session()
@@ -33,8 +34,18 @@ class ERPNextClient:
         self.api_secret = api_secret
         self.session.headers.update({
             'Authorization': f'token {self.api_key}:{self.api_secret}',
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
         })
+
+        if "localhost" in self.endpoint_host:
+            self.session.headers.update({
+                'Host': f'{self.endpoint_host}'
+            })
+            self.host_api = f"http://127.0.0.1:{self.endpoint_port}"
+        else:
+            self.host_api = f"https://{self.endpoint_host}:{self.endpoint_port}"
+
+
         return self._check_credentials()
 
     def _check_credentials(self):
@@ -161,27 +172,20 @@ class ERPNextClient:
             return None
 
     def doUpdate(self, doctype, name, data):
-        from urllib.parse import quote, urlencode
+        from urllib.parse import quote
 
         """
         Updates an existing document in ERPNext.
-
-        Args:
-            doctype (str): The name of the DocType (e.g., "SalesOrder").
-            name (str): The name of the document to update.
-            data (dict): A dictionary containing the fields and values to update.
-
-        Returns:
-            dict or None: The updated document data or None if the request failed.
         """
-        url = f"{self.host_api}/api/resource/{doctype}/{quote(name)}"
+
+        url = f"{self.host_api}/api/resource/{quote(doctype)}/{quote(name)}"
         try:
-            response = self.session.put(url, data=json.dumps(data))
+            response = self.session.put(url, json=data)
             response.raise_for_status()
             print(f"✅ Updated {doctype}: {response.json()['data']['name']}")
             return response.json()
         except requests.exceptions.HTTPError as e:
-            print(f"❌ Failed to update {doctype}: {e}")
+            print(f"❌ Failed to update {doctype} '{name}': {e}")
             try:
                 error_details = e.response.json()
                 print("🔎 Server response:", json.dumps(error_details, indent=2))

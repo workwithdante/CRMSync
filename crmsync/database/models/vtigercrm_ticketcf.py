@@ -7,5 +7,5 @@ metadata = MetaData()
 metadata.reflect(bind=get_engine(), only=['vtiger_ticketcf'])
 
 
-class VTigerTicket(Base):
+class VTigerTicketCF(Base):
     __table__ = metadata.tables['vtiger_ticketcf']

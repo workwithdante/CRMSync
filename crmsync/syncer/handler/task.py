@@ -38,4 +38,6 @@ class Task(DocTypeHandler):
             "priority": "Low",
             "status": "Completed",
             "issue": self.issue_name,
+            "completed_by": self.employee,
+            "completed_on": self.date
         }

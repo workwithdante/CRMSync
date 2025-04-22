@@ -13,7 +13,7 @@ from spacy.language import Language
     "fuzzy_person_detector",
     default_config={"valid_names": [], "threshold": 75}
 )
-def create_fuzzy_person_detector(nlp, name, valid_names: List[str], threshold: int):
+def create_fuzzy_person_detector(valid_names: List[str], threshold: int):
     """
     Factory for fuzzy_person_detector component.
     - valid_names: list of full valid names

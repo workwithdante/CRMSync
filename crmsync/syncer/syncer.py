@@ -1,7 +1,10 @@
+import math
 import os
 import json
+import random
 import spacy
 from spacy.tokens import DocBin
+from syncer.entry_parser import EntryParserNER
 
 from crmsync.config import SyncConfig
 from database.services.query import QueryService
@@ -30,8 +33,36 @@ class Syncer:
                 # 1) Fetch records
                 df = self.query_service.fetch_records(uow)
 
+                valid_names = [
+                    "Jorge Devia", "Yesica Bedoya", "Yorlady Franco", "Luisa Buitrago",
+                    "Carolina Gomez", "Margarita Mesa", "Wendy Patiño", "Valentina Carvajal",
+                    "Karen Arias", "Julieth Loaiza", "Tatiana Betancourt", "Juan Ocampo",
+                    "Anyela Ospina", "Juan Alarcón", "Santiago Moncada", "Victoria Cuellar",
+                    "Ximena Cuenca", "Elizabeth Arias", "Yuliana Hidalgo", "Alejandra Paramo",
+                    "Yensi Cruz", "Adriana Infante", "Angela Manso", "Natalia Sierra",
+                    "Jennifer Arango", "Maira Santander", "Daniela Lopez", "Danna Suarez",
+                    "Karol Ramirez", "Yesica Ramirez", "Erika Castro", "Eliana Sanchez", "Eliana Gil",
+                    "Alejandro Ruiz", "Paula Bastidas", "Yuliana Perez", "Lilian Aristizabal"
+                ]
+
+                # 2.2) Entrenar el modelo NER de SpaCy
+                self._train_ner_model("model")
+
+                ner_model_full_path = os.path.join(
+                    os.path.dirname(os.path.abspath(__file__)), "model/model-best"
+                )
+
+                # 0) Instanciamos UNA SOLA VEZ el parser SpaCy+fuzzy
+                parser = EntryParserNER(
+                    valid_names=valid_names,
+                    ner_model_path=ner_model_full_path
+                )
+                # Para acelerar: eliminar tok2vec (solo NER + ruler + custom)
+                if "tok2vec" in parser.nlp.pipe_names:
+                    parser.nlp.remove_pipe("tok2vec")
+
                 for contact_id, group in df.groupby("contact_id"):
-                    pa = PolicyAssembler(self.config, contact_id, group)
+                    pa = PolicyAssembler(self.config, contact_id, group, parser)
                     df_issues = self.query_service.fetch_issues(uow, contact_id)
                     for _, ticket in df_issues.iterrows():
                         subject = ticket.loc["title"]
@@ -61,20 +92,32 @@ class Syncer:
         return self.recursive_join(new_query, join_list[1:])
 
 
-    @staticmethod
-    def _convert_json_to_spacy(input_json: str, output_spacy: str, base_model: str = "es_core_news_lg"):
+    def _convert_json_to_spacy(self,
+                            train_spacy: str = "train.spacy",
+                            dev_spacy: str = "dev.spacy",
+                            split_ratio: float = 0.8,
+                            base_model: str = "es_core_news_lg"):
         """
-        Convierte dataset.json a train.spacy o dev.spacy usando el modelo base de spaCy.
+        Convierte dataset.json en train.spacy y dev.spacy (dividido automáticamente).
         """
         nlp = spacy.load(base_model, exclude=["tok2vec", "tagger", "parser"])
-        db = DocBin()
-        
-        current_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "dataset")
-        filename = os.path.join(current_dir, f"dataset.json")
+
+        current_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model/dataset")
+        filename = os.path.join(current_dir, "dataset.json")
+
         with open(filename, 'r', encoding='utf-8') as input_json:
-            data = json.load(input_json) 
-        
-            for entry in data:
+            data = json.load(input_json)
+
+        random.shuffle(data)  # Mezclar los datos antes de dividir
+
+        # Dividir dataset según split_ratio
+        split_point = math.ceil(len(data) * split_ratio)
+        train_data = data[:split_point]
+        dev_data = data[split_point:]
+
+        def create_docbin(data_subset):
+            db = DocBin()
+            for entry in data_subset:
                 doc = nlp.make_doc(entry["text"])
                 ents = []
                 for start, end, label in entry["entities"]:
@@ -83,40 +126,54 @@ class Syncer:
                         ents.append(span)
                 doc.ents = ents
                 db.add(doc)
-            db.to_disk(output_spacy)
-            print(f"✅ Saved {output_spacy}")
+            return db
 
-    @staticmethod
-    def _train_ner_model(dataset_path: str, output_dir: str = "model", config_path: str = "config.cfg"):
-        """
-        Inicializa config.cfg si no existe y entrena el modelo spaCy NER en CPU.
-        """
+        # Crear y guardar train.spacy
+        train_db = create_docbin(train_data)
+        train_db.to_disk(train_spacy)
+        print(f"✅ Saved {train_spacy} successfully (train set)")
+
+        # Crear y guardar dev.spacy
+        dev_db = create_docbin(dev_data)
+        dev_db.to_disk(dev_spacy)
+        print(f"✅ Saved {dev_spacy} successfully (dev set)")
+
+    def _train_ner_model(self, output_dir: str = "model", config_path: str = "model/config.cfg"):
         from pathlib import Path
         import subprocess
+        import os
+
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        output_full_dir = os.path.join(current_dir, output_dir)
+        config_full_path = os.path.join(current_dir, config_path)
+        train_spacy = os.path.join(current_dir, "model/dataset/train.spacy")
+        dev_spacy = os.path.join(current_dir, "model/dataset/dev.spacy")
 
         # 1) Crear config.cfg si no existe
-        if not Path(config_path).exists():
+        if not Path(config_full_path).exists():
+            self._convert_json_to_spacy(train_spacy=train_spacy, dev_spacy=dev_spacy, split_ratio=0.75)
+
             subprocess.run([
                 "python", "-m", "spacy", "init", "config", config_path,
                 "--lang", "es", "--pipeline", "ner", "--optimize", "accuracy"
             ], check=True)
 
-        # 2) Ejecutar entrenamiento en CPU (sin --gpu-id)
-        cmd = [
-            "python", "-m", "spacy", "train", config_path,
-            "--output", output_dir,
-            "--paths.train", "train.spacy",
-            "--paths.dev", "dev.spacy",
-        ]
-        try:
-            result = subprocess.run(cmd, check=True)
-            print("✅ Training completed successfully on CPU\n")
-            print(result.stdout)
-        except subprocess.CalledProcessError as e:
-            print("❌ Training failed!")
-            print("Exit code:", e.returncode)
-            print("\n=== STDOUT ===")
-            print(e.stdout or "<no stdout>")
-            print("\n=== STDERR ===")
-            print(e.stderr or "<no stderr>")
-            raise
+        # 2) Ejecutar entrenamiento en CPU (sin --gpu-id) si no existe el directorio de salida
+        model_full_dir = os.path.join(current_dir, output_dir, "model-best")
+        if not Path(model_full_dir).exists():
+            cmd = [
+                "python", "-m", "spacy", "train", config_full_path,
+                "--output", output_full_dir
+            ]
+            try:
+                result = subprocess.run(cmd, check=True)
+                print("✅ Training completed successfully on CPU\n")
+                print(result.stdout)
+            except subprocess.CalledProcessError as e:
+                print("❌ Training failed!")
+                print("Exit code:", e.returncode)
+                print("\n=== STDOUT ===")
+                print(e.stdout or "<no stdout>")
+                print("\n=== STDERR ===")
+                print(e.stderr or "<no stderr>")
+                raise

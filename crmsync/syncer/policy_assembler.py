@@ -19,32 +19,11 @@ import gc
 logging.basicConfig(level=logging.INFO)
 
 class PolicyAssembler:
-    def __init__(self, config: SyncConfig, contact_id: str, rows: DataFrame):
+    def __init__(self, config: SyncConfig, contact_id: str, rows: DataFrame, parser: EntryParserNER):
         self.config = config
         self.contact_id = contact_id
         self.rows = rows
-        
-        self.valid_names = [
-            "Jorge Devia", "Yesica Bedoya", "Yorlady Franco", "Luisa Buitrago",
-            "Carolina Gomez", "Margarita Mesa", "Wendy Patiño", "Valentina Carvajal",
-            "Karen Arias", "Julieth Loaiza", "Tatiana Betancourt", "Juan Ocampo",
-            "Anyela Ospina", "Juan Alarcón", "Santiago Moncada", "Victoria Cuellar",
-            "Ximena Cuenca", "Elizabeth Arias", "Yuliana Hidalgo", "Alejandra Paramo",
-            "Yensi Cruz", "Adriana Infante", "Angela Manso", "Natalia Sierra",
-            "Jennifer Arango", "Maira Santander", "Daniela Lopez", "Danna Suarez",
-            "Karol Ramirez", "Yesica Ramirez", "Erika Castro", "Eliana Sanchez", "Eliana Gil",
-            "Alejandro Ruiz", "Paula Bastidas", "Yuliana Perez", "Lilian Aristizabal"
-        ]
-        
-        # 0) Instanciamos UNA SOLA VEZ el parser SpaCy+fuzzy
-        self.parser = EntryParserNER(
-            valid_names=self.valid_names,
-            ner_model_path="model/model-best"
-        )
-        # Para acelerar: eliminar tok2vec (solo NER + ruler + custom)
-        if "tok2vec" in self.parser.nlp.pipe_names:
-            self.parser.nlp.remove_pipe("tok2vec")
-
+        self.parser = parser
         
         # Cachés internos
         # Key contacto: (first_name, last_name, day_of_birth)

@@ -12,5 +12,5 @@ from crmsync.config import SyncConfig
 
 conf = SyncConfig()
 
-client = ERPNextClient(conf.endpoint)
+client = ERPNextClient(conf.endpoint_host, conf.endpoint_port)
 client.doLogin(conf.api_key, conf.api_secret)
