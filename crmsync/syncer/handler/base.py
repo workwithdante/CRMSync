@@ -75,9 +75,10 @@ class DocTypeHandler(ABC):
             comparator.register("phone_nos", lambda n, e: comparator.compare_list_of_dicts(n, e, ["phone", "is_primary_phone", "is_primary_mobile_no"]))
             comparator.register("attributes", lambda n, e: comparator.compare_list_of_dicts(n, e, ["attribute", "attribute_value"]))
             comparator.register("items", lambda n, e: comparator.compare_items_with_names(n, e, match_by="item_code"))
-            comparator.register("custom_dependents", lambda n, e: comparator.compare_list_of_dicts(n, e, ["contact", "first_name", "middle_name", "last_name", "gender", "day_of_birth", "relationship", "social_security_number", "job_type", "income", "migration_status", "smoke", "been_in_jail", "coverage", "language"]))
+            comparator.register("custom_dependents", lambda n, e: comparator.compare_list_of_dicts(n, e, ["contact", "first_name", "middle_name", "last_name", "gender", "day_of_birth", "relationship", "social_security_number", "job_type", "income", "migratory_status", "smoke", "been_in_jail", "coverage", "language"]))
             comparator.register("custom_company_info", lambda n, e: comparator.compare_list_of_dicts(n, e, ["contact", "member_id", "user", "password"]))
-            
+            comparator.register("custom_broker_info", lambda n, e: comparator.compare_list_of_dicts(n, e, ["broker_name", "national_producer_number", "initial_date", "end_date"]))
+
             changes = comparator.compare_dicts(new_data, existing)
 
             if changes:

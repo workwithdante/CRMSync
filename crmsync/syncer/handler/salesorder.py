@@ -9,7 +9,7 @@ class SalesOrder(DocTypeHandler):
     contacts: List[Contact]
     customer_name: str
     item_name: str
-    customer_address: str
+    shipping_address_name: str
     delivery_date: str
     custom_expiry_date: str
     custom_subscriber_id: str
@@ -22,6 +22,7 @@ class SalesOrder(DocTypeHandler):
     transaction_date: str
     custom_ffm_app_id: str
     rate: float
+    broker: str
     
     @classmethod
     def from_row(cls, row, contacts: List[Contact], customer_name, item_name, address_name):
@@ -30,7 +31,7 @@ class SalesOrder(DocTypeHandler):
             "transaction_date", "delivery_date", "custom_expiry_date",
             "custom_ffm_app_id", "custom_subscriber_id", "custom_app_review",
             "custom_consent", "custom_renew", "custom_sales_person",
-            "custom_sales_date", "custom_digitizer", "rate"
+            "custom_sales_date", "custom_digitizer", "rate", "broker"
         ]
 
         # Genera kwargs dinámicamente desde el row
@@ -41,7 +42,7 @@ class SalesOrder(DocTypeHandler):
             contacts=contacts,
             customer_name=customer_name,
             item_name=item_name,
-            customer_address=address_name,
+            shipping_address_name=address_name,
             **kwargs
         )
 
@@ -67,11 +68,11 @@ class SalesOrder(DocTypeHandler):
     def build_data(self):
         data =  {
             "customer": self.customer_name,
-            "company": 'Mabe Center',
+            "company": 'Sierra Group',
             "delivery_date": self.delivery_date,
             "custom_expiry_date": self.custom_expiry_date,
             "custom_ffm_app_id": self.custom_ffm_app_id,
-            "transaction_date": self.transaction_date,
+            "transaction_date": self.transaction_date if self.broker != 'Otro Broker' else self.delivery_date,
             "custom_subscriber_id": self.custom_subscriber_id,
             "custom_app_review": self.custom_app_review,
             "custom_consent": self.custom_consent,
@@ -87,8 +88,27 @@ class SalesOrder(DocTypeHandler):
                     "rate": self.rate,
                 },
             ],
-            "customer_address": self.customer_address,
+            "shipping_address_name": self.shipping_address_name if self.shipping_address_name else "",
+            "territory": "United States",
+            "customer_address": self.shipping_address_name if self.shipping_address_name else "",
         }
+        
+        if not self.shipping_address_name:
+            data["shipping_address"] = ""
+            data["address_display"] = ""
+            
+        broker_npn = {
+            "Beatriz Sierra": 8602276,
+            "Ana Daniella Corrales": 19011307,
+            "Juan Ramirez": 4440000,
+        }
+            
+        data.setdefault("custom_broker_info", []).append({
+            "broker_name": self.broker,
+            "national_producer_number": broker_npn.get(self.broker, 0.0),
+            "initial_date": self.delivery_date,
+            "end_date": self.custom_expiry_date,
+        })
         
         # Agregar entradas a custom_company_info si al menos un campo existe
         for contact in self.contacts:
@@ -114,9 +134,9 @@ class SalesOrder(DocTypeHandler):
             if any([contact.member_id, contact.user, contact.password]):
                 data.setdefault("custom_company_info", []).append({
                     "contact": contact.name,
-                    "member_id": contact.member_id,
-                    "user": contact.user,
-                    "password": contact.password,
+                    "member_id": contact.member_id if contact.member_id else "",
+                    "user": contact.user if contact.user else "",
+                    "password": contact.password if contact.password else "",
                 })
 
         return data

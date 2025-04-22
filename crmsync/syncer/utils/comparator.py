@@ -1,6 +1,6 @@
 import re
 from typing import Any, Dict, List
-
+from collections import Counter
 
 class DictComparator:
     def __init__(self):
@@ -35,31 +35,47 @@ class DictComparator:
     def _is_number(self, value: Any) -> bool:
         return re.match(r'^-?\d+(?:\.\d+)?$', str(value)) is not None
 
-    def compare_list_of_dicts(self, new_list: List[Dict], existing_list: List[Dict], keys: List[str]) -> bool:
+    def compare_list_of_dicts(
+        self,
+        new_list: List[Dict[str, Any]],
+        existing_list: List[Dict[str, Any]],
+        keys: List[str]
+    ) -> bool:
         if not isinstance(new_list, list) or not isinstance(existing_list, list):
             return True
 
-        def is_significant(value: Any) -> bool:
-            return value not in (None, '', 0, 0.0)
+        def is_significant(v: Any) -> bool:
+            return v not in (None, '', 0, 0.0)
 
-        for new_item in new_list:
-            match_found = False
-            for existing in existing_list:
-                mismatches = {
-                    k: (new_item.get(k), existing.get(k))
-                    for k in keys
-                    if is_significant(new_item.get(k)) and new_item.get(k) != existing.get(k)
-                }
-                if not mismatches:
-                    match_found = True
-                    break  # Encontró coincidencia, no hay que reportar
-            if not match_found:
-                print(f"No match for item: {new_item}")
-                print(f"Mismatched fields: {mismatches}")
+        def normalize(v: Any) -> Any:
+            """Convierte valores no-significativos a None, deja los demás intactos."""
+            return v if is_significant(v) else None
+
+        def identity(item: Dict[str, Any]):
+            """Tupla de valores normalizados, en el orden de keys."""
+            return tuple(normalize(item.get(k)) for k in keys)
+
+        # Construye los Counters sobre las identidades normalizadas
+        new_ids      = [identity(i) for i in new_list]
+        existing_ids = [identity(i) for i in existing_list]
+
+        new_counts      = Counter(new_ids)
+        existing_counts = Counter(existing_ids)
+
+        # 1) ¿Hay algo que agregar? (new tiene más de existing)
+        for id_, cnt in new_counts.items():
+            if cnt > existing_counts.get(id_, 0):
+                print(f"To add (new > existing): {id_} count_diff={cnt-existing_counts.get(id_,0)}")
+                return True
+
+        # 2) ¿Hay algo que remover? (existing tiene más de new)
+        for id_, cnt in existing_counts.items():
+            if cnt > new_counts.get(id_, 0):
+                print(f"To remove (existing > new): {id_} count_diff={cnt-new_counts.get(id_,0)}")
                 return True
 
         return False
-        
+  
     def compare_items_with_names(self, new_items, existing_items, match_by="item_code"):
         if not isinstance(new_items, list) or not isinstance(existing_items, list):
             return True

@@ -80,6 +80,9 @@ def sql_transform_title_case(column):
         )
     )
 
+def sql_transform_pass(column):
+    return column
+
 
 
 def create_hybrid_property(cf_column: str, prop_name: str, transform_function, sql_transform_function=None):
@@ -99,7 +102,7 @@ def create_hybrid_property(cf_column: str, prop_name: str, transform_function, s
 
 # Asignaciones directas con validaciones y transformaciones:
 setattr(VTigerSalesOrderCF, 'saleswoman', create_hybrid_property('cf_2183', 'saleswoman', VTigerSalesOrderCF.validText, sql_transform_text))
-setattr(VTigerSalesOrderCF, 'broker', create_hybrid_property('cf_2067', 'broker', VTigerSalesOrderCF.validText, sql_transform_text))
+setattr(VTigerSalesOrderCF, 'broker', create_hybrid_property('cf_2067', 'broker', VTigerSalesOrderCF.validText, sql_transform_pass))
 setattr(VTigerSalesOrderCF, 'item_code', create_hybrid_property('cf_2035', 'item_code', VTigerSalesOrderCF.validItemCode, sql_transform_text))
 setattr(VTigerSalesOrderCF, 'custom_ffm_app_id', create_hybrid_property('cf_2115', 'custom_ffm_app_id', VTigerSalesOrderCF.validText, sql_transform_text))
 setattr(VTigerSalesOrderCF, 'custom_subscriber_id', create_hybrid_property('cf_2803', 'custom_subscriber_id', VTigerSalesOrderCF.validText, sql_transform_text))
@@ -113,3 +116,4 @@ setattr(VTigerSalesOrderCF, 'transaction_date', create_hybrid_property('cf_2255'
 setattr(VTigerSalesOrderCF, 'delivery_date', create_hybrid_property('cf_2059', 'delivery_date', VTigerSalesOrderCF.validDate, sql_transform_date))
 setattr(VTigerSalesOrderCF, 'custom_expiry_date', create_hybrid_property('cf_2193', 'custom_expiry_date', VTigerSalesOrderCF.validDate, sql_transform_date))
 setattr(VTigerSalesOrderCF, 'rate', create_hybrid_property('cf_2033', 'rate', VTigerSalesOrderCF.validFloat, sql_transform_float))
+setattr(VTigerSalesOrderCF, 'company', create_hybrid_property('cf_2069', 'company', VTigerSalesOrderCF.validText, sql_transform_text))

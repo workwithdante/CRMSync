@@ -6,14 +6,16 @@ from crmsync.syncer.handler.base import DocTypeHandler
 class Customer(DocTypeHandler):
     first_name: str
     last_name: str
-    second_name: Optional[str] = None
+    second_name: str
+    customer_name: str
     
     @classmethod
     def from_row(cls, row, mapping):
         return cls(
             first_name=row.get(mapping["first_name"]),
             last_name=row.get(mapping["last_name"]),
-            second_name=row.get(mapping.get("second_name"))
+            second_name=row.get(mapping.get("second_name")),
+            customer_name=row.get("customer_name"),
         )
 
     def __post_init__(self):
@@ -21,7 +23,6 @@ class Customer(DocTypeHandler):
         self.normalize_and_sync()
 
     def get_filters(self):
-        #return [["Customer", "name", "=", self.full_name()]]
         return None
     
     def get_existing_name(self):
@@ -33,4 +34,7 @@ class Customer(DocTypeHandler):
         }
 
     def full_name(self):
-        return " ".join(filter(None, [self.first_name, self.second_name, self.last_name]))
+        if self.first_name and self.last_name:
+            return " ".join(filter(None, [self.first_name, self.second_name, self.last_name]))
+        else:
+            return self.customer_name

@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import re
 from typing import Optional
 from crmsync.syncer.handler.base import DocTypeHandler
 
@@ -117,7 +118,10 @@ class Contact(DocTypeHandler):
         
         self.email1 = self.email1.lower() if self.email1 else None
         self.email2 = self.email2.lower() if self.email2 else None
-                
+        
+        self.phone = re.sub(r'\D', '', self.phone) if self.phone else None
+        self.mobile_no = re.sub(r'\D', '', self.mobile_no) if self.mobile_no else None
+        
     def get_filters(self):
         return None
     
