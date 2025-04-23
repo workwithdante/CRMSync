@@ -135,6 +135,8 @@ class Contact(DocTypeHandler):
             "first_name": self.first_name,
             "last_name": self.last_name,
             "middle_name": self.middle_name,
+            "custom_day_of_birth": self.day_of_birth,
+            "custom_social_security_number": self.social_security_number,
             "gender": self.gender,
             "links": [
                 {

@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import List, Optional
+from datetime import datetime
+from typing import List
 
 from syncer.handler.contact import Contact
 from crmsync.syncer.handler.base import DocTypeHandler
@@ -53,6 +54,12 @@ class SalesOrder(DocTypeHandler):
         
     def normalize_fields(self):
         self.custom_consent = self.custom_consent if self.custom_consent != 'Email Send' else "Email Sent"
+
+        delivery = datetime.strptime(self.delivery_date, "%Y-%m-%d").date()
+        transaction = datetime.strptime(self.transaction_date, "%Y-%m-%d").date()
+
+        if transaction > delivery:
+            self.transaction_date = self.delivery_date
 
     def get_filters(self):
         return [
