@@ -1,7 +1,8 @@
 import logging
+import os
 from typing import Dict, List, Tuple
 from pandas import DataFrame
-from syncer.entry_parser import EntryParserNER
+from syncer.entry_parser_doc_simple import SimpleNameResolver
 from syncer.handler.issue import Issue
 from syncer.handler.task import Task
 
@@ -19,11 +20,10 @@ import gc
 logging.basicConfig(level=logging.INFO)
 
 class PolicyAssembler:
-    def __init__(self, config: SyncConfig, contact_id: str, rows: DataFrame, parser: EntryParserNER):
+    def __init__(self, config: SyncConfig, contact_id: str, rows: DataFrame):
         self.config = config
         self.contact_id = contact_id
         self.rows = rows
-        self.parser = parser
         
         # Cachés internos
         # Key contacto: (first_name, last_name, day_of_birth)
@@ -85,6 +85,30 @@ class PolicyAssembler:
             
             # 2.3) Item (siempre uno nuevo)
             item = Item.from_row(row, *self.config.item_mapping)
+
+            documents = {
+                key: value
+                for key, value in {
+                    row.get("document_person_1"): row.get("document_name_1"),
+                    row.get("document_person_2"): row.get("document_name_2"),
+                    row.get("document_person_3"): row.get("document_name_3"),
+                    row.get("document_person_4"): row.get("document_name_4"),
+                    row.get("document_person_5"): row.get("document_name_5"),
+                }.items()
+                if value not in (None, '')
+            }
+
+            for doc_person, doc_type in documents.items():
+                valid_names = [ contact.name.split("-")[0] for contact in contacts ]
+                parser = SimpleNameResolver(valid_names=valid_names if valid_names else [self.customer.name])
+                [chunk] = parser.process_text(doc_person)
+                target_name = chunk.get("matched")
+
+                contact = next((c for c in contacts if c.name.startswith(target_name)), None)
+                
+                if contact:
+                    contact.document_type.append(doc_type)
+                    contact.document_deadline = row.get("document_deadline")
 
             # 2.4) SalesOrder para esta fila
             SalesOrder.from_row(

@@ -4,7 +4,6 @@ import json
 import random
 import spacy
 from spacy.tokens import DocBin
-from syncer.entry_parser import EntryParserNER
 
 from crmsync.config import SyncConfig
 from database.services.query import QueryService
@@ -33,36 +32,12 @@ class Syncer:
                 # 1) Fetch records
                 df = self.query_service.fetch_records(uow)
 
-                valid_names = [
-                    "Jorge Devia", "Yesica Bedoya", "Yorlady Franco", "Luisa Buitrago",
-                    "Carolina Gomez", "Margarita Mesa", "Wendy Patiño", "Valentina Carvajal",
-                    "Karen Arias", "Julieth Loaiza", "Tatiana Betancourt", "Juan Ocampo",
-                    "Anyela Ospina", "Juan Alarcón", "Santiago Moncada", "Victoria Cuellar",
-                    "Ximena Cuenca", "Elizabeth Arias", "Yuliana Hidalgo", "Alejandra Paramo",
-                    "Yensi Cruz", "Adriana Infante", "Angela Manso", "Natalia Sierra",
-                    "Jennifer Arango", "Maira Santander", "Daniela Lopez", "Danna Suarez",
-                    "Karol Ramirez", "Yesica Ramirez", "Erika Castro", "Eliana Sanchez", "Eliana Gil",
-                    "Alejandro Ruiz", "Paula Bastidas", "Yuliana Perez", "Lilian Aristizabal"
-                ]
-
-                # 2.2) Entrenar el modelo NER de SpaCy
-                self._train_ner_model("model")
-
-                ner_model_full_path = os.path.join(
-                    os.path.dirname(os.path.abspath(__file__)), "model/model-best"
-                )
-
-                # 0) Instanciamos UNA SOLA VEZ el parser SpaCy+fuzzy
-                parser = EntryParserNER(
-                    valid_names=valid_names,
-                    ner_model_path=ner_model_full_path
-                )
-                # Para acelerar: eliminar tok2vec (solo NER + ruler + custom)
-                if "tok2vec" in parser.nlp.pipe_names:
-                    parser.nlp.remove_pipe("tok2vec")
+                # 2) Entrenar el modelo NER de SpaCy
+                #self._train_ner_model("model")
 
                 for contact_id, group in df.groupby("contact_id"):
-                    pa = PolicyAssembler(self.config, contact_id, group, parser)
+                    PolicyAssembler(self.config, contact_id, group)
+                    """
                     df_issues = self.query_service.fetch_issues(uow, contact_id)
                     for _, ticket in df_issues.iterrows():
                         subject = ticket.loc["title"]
@@ -70,6 +45,7 @@ class Syncer:
                         raw_description = ticket.loc["description"]
                         raw_solution = ticket.loc["solution"]
                         pa.create_issue(subject, status, raw_description, raw_solution)
+                    """
 
 
         except Exception as e:

@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 import re
-from typing import Optional
+from typing import List, Optional
 from crmsync.syncer.handler.base import DocTypeHandler
 
 @dataclass
@@ -27,6 +27,8 @@ class Contact(DocTypeHandler):
     member_id: Optional[str] = None
     user: Optional[str] = None
     password: Optional[str] = None
+    document_type: Optional[List[str]] = field(default_factory=list)
+    document_deadline: Optional[str] = None
 
     def __post_init__(self):
         self.doctype = "Contact"

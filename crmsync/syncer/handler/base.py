@@ -78,6 +78,7 @@ class DocTypeHandler(ABC):
             comparator.register("custom_dependents", lambda n, e: comparator.compare_list_of_dicts(n, e, ["contact", "first_name", "middle_name", "last_name", "gender", "day_of_birth", "relationship", "social_security_number", "job_type", "income", "migratory_status", "smoke", "been_in_jail", "coverage", "language"]))
             comparator.register("custom_company_info", lambda n, e: comparator.compare_list_of_dicts(n, e, ["contact", "member_id", "user", "password"]))
             comparator.register("custom_broker_info", lambda n, e: comparator.compare_list_of_dicts(n, e, ["broker_name", "national_producer_number", "initial_date", "end_date"]))
+            comparator.register("custom_documents", lambda n, e: comparator.compare_list_of_dicts(n, e, ["contact", "ssn", "income", "migratory", "coverage", "citizenship", "dateline"]))
 
             changes = comparator.compare_dicts(new_data, existing)
 
@@ -93,7 +94,10 @@ class DocTypeHandler(ABC):
                 self.name = self.extract_name(updated.get("data"))
             else:
                 self.name = self.extract_name(existing)
+            
+            print(f"Actualizando {self.doctype}: {self.name}")
 
         else:
             created = client.doCreate(self.doctype, new_data)
             self.name = self.extract_name(created.get("data"))
+            print(f"Creando {self.doctype}: {self.name}")

@@ -138,5 +138,31 @@ class SalesOrder(DocTypeHandler):
                     "user": contact.user if contact.user else "",
                     "password": contact.password if contact.password else "",
                 })
+            
+            if contact.document_deadline:
+                document_type = {
+                    "Copia ss": "ssn",
+                    "Negacion medicaid": "coverage",
+                    "Prueba cambio de direccion": "coverage",
+                    "Perdida de cobertura": "coverage",
+                    "Prueba de ingresos": "income",
+                    "Prueba migratoria": "migratory",
+                    "Prueba no encarcelamiento": "coverage",
+                    "Prueba Sep": "coverage",
+                    "E. cobertura médica": "coverage",
+                    "Prueba Ciudadanía": "citizenship",
+                    "E. cobertura empleo": "coverage",
+                }
+
+                entry = {
+                    "contact": contact.name,
+                    "dateline": contact.document_deadline,
+                }
+
+                for doc_type in contact.document_type:
+                    if key := document_type.get(doc_type):
+                        entry[key] = 1
+
+                data.setdefault("custom_documents", []).append(entry)
 
         return data
