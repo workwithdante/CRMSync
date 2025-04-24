@@ -62,28 +62,7 @@ class Contact(DocTypeHandler):
             password=row.get(cfg["password"]),
         )
         
-    def normalize_fields(self):
-        relations_in_spanish = {
-            "ABUELO(A)": "Grandparent",
-            "HERMANO(A)": "Sibling",
-            "HIJO(A)": "Child",
-            "NIETO(A)": "Grandchild",
-            "PADRE/MADRE": "Parent",
-            "SOBRINO(A)": "Cousin",
-            "SUEGRO(O)": "Parent-In-Law",
-            "TIO(A)": "Uncle/Aunt",
-            "HIJASTRO(A)": "Stepchild",
-            "CUÑADO(A)": "Nibling",
-            "OTRO": "Other",
-            "YERNO/NUERA": "Nibling",
-            "PRIMO(A)": "Cousin",
-        }
-        
-        if self.relationship:
-            self.relationship = relations_in_spanish.get(self.relationship)
-        else:
-            self.relationship = "Owner"
-        
+    def normalize_fields(self):        
         coverage_list = {
             "OBAMACARE": "Obamacare",
             "MEDICARE": "Medicare",
@@ -126,17 +105,25 @@ class Contact(DocTypeHandler):
         
     def get_filters(self):
         return None
+
+    def get_filters_child(self):
+        return None
     
     def get_existing_name(self):
         return self.full_name()
 
     def build_data(self):
+        if self.social_security_number and len(re.sub(r'\D', '', self.social_security_number)) > 0:
+            clean_ssn = re.sub(r'\D', '', self.social_security_number).zfill(9) if self.social_security_number else None
+            if len(clean_ssn) > 9:
+                raise ValueError("Social Security Number must be 8 digits long.") 
+        
         data = {
             "first_name": self.first_name,
             "last_name": self.last_name,
             "middle_name": self.middle_name,
             "custom_day_of_birth": self.day_of_birth,
-            "custom_social_security_number": self.social_security_number,
+            "custom_social_security_number": clean_ssn if self.social_security_number else None,
             "gender": self.gender,
             "links": [
                 {

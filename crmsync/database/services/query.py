@@ -1,13 +1,17 @@
 from database.models.vtigercrm_troubletickets import VTigerTroubleTickets
 from database.models.vtigercrm_ticketcf import VTigerTicketCF
 from crmsync.config import SyncConfig
-from pandas import DataFrame
+
+from datetime import datetime, date
+
 from sqlalchemy import func, select, text
 
 from sqlalchemy import and_
 from sqlalchemy.ext.hybrid import hybrid_property
 
+from pandas import DataFrame
 import pandas as pd
+import polars as pl
 
 from crmsync.database.models.vtigercrm_contactcf import VTigerContactsCF
 from crmsync.database.models.vtigercrm_contactdetails import VTigerContactDetails
@@ -23,7 +27,7 @@ class QueryService:
         result = uow.execute(text("SELECT VERSION();"))
         return result.fetchone()[0]
 
-    def fetch_records(self, uow, limit_contacts: int = 100) -> pd.DataFrame:
+    def fetch_records(self, uow, limit_contacts: int = 10) -> DataFrame:
         # ----------- 0) JOIN definitions -----------
         joins = [
             (VTigerSalesOrder, VTigerSalesOrderCF.salesorderid == VTigerSalesOrder.salesorderid),
@@ -93,6 +97,8 @@ class QueryService:
 
         # ----------- 6) Ejecutar y retornar -----------
         df = pd.read_sql(q.statement, uow.bind)
+        #dfpd = self.clean_for_polars(dfpd)
+        #df =pl.from_pandas(dfpd)
         print(f"✅ {len(df)} registros encontrados para {len(contact_ids)} contactos.")
         return df
         
@@ -141,7 +147,10 @@ class QueryService:
         )
 
         df = pd.read_sql(q.statement, uow.bind)
+        #dfpd = self.clean_for_polars(dfpd)
+        #df =pl.from_pandas(dfpd)
         print(f"✅ {len(df)} issues found for contact {contact_id}.")
         return df
 
-
+    def clean_for_polars(self, df: pd.DataFrame) -> pd.DataFrame:
+        return df.astype(str)

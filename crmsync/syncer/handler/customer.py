@@ -24,6 +24,9 @@ class Customer(DocTypeHandler):
 
     def get_filters(self):
         return None
+
+    def get_filters_child(self):
+        return None
     
     def get_existing_name(self):
         return self.full_name()

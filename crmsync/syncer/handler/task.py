@@ -27,6 +27,9 @@ class Task(DocTypeHandler):
             ["Task", "description", "=", self.description],
             ["Task", "issue", "=", self.issue_name],
         ]
+
+    def get_filters_child(self):
+        return None
     
     def get_existing_name(self):
         return None

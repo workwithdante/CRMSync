@@ -1,7 +1,8 @@
 import logging
-import os
-from typing import Dict, List, Tuple
-from pandas import DataFrame
+import gc
+from tqdm import tqdm
+from typing import Dict, Tuple
+from polars import DataFrame
 from syncer.entry_parser_doc_simple import SimpleNameResolver
 from syncer.handler.issue import Issue
 from syncer.handler.task import Task
@@ -13,10 +14,6 @@ from crmsync.syncer.handler.address import Address
 from crmsync.syncer.handler.item import Item
 from crmsync.config import SyncConfig
 
-# at the very top of your file
-import gc
-
-
 logging.basicConfig(level=logging.INFO)
 
 class PolicyAssembler:
@@ -24,46 +21,40 @@ class PolicyAssembler:
         self.config = config
         self.contact_id = contact_id
         self.rows = rows
-        
-        # Cachés internos
-        # Key contacto: (first_name, last_name, day_of_birth)
-        self._contact_cache: Dict[Tuple[str,str,str], Contact] = {}
-        # Key dirección: (address_title, address_type, address_line1,
-        #                  city, state, pincode, country)
-        self._address_cache: Dict[Tuple[str,str,str,str,str,str,str], Address] = {}
+
+        self._contact_cache: Dict[Tuple[str, str, str], Contact] = {}
+        self._address_cache: Dict[Tuple[str, str, str, str], Address] = {}
 
         # 1) Crear el customer UNA VEZ (la primera fila)
-        first_row = rows.iloc[0]
-        # Supongo que Customer.from_row toma (row, mapping, **kwargs)
+        first_row = rows.iloc[0]     
         customer = Customer.from_row(first_row, *self.config.customer_mapping)
         self.customer = customer
+
+        # Precargar mappings
+        addr_map = self.config.address_mapping[0]
 
         # 2) Iterar todas las filas (órdenes)
         for _, row in rows.iterrows():
             # 2.1) Address con caché
-            addr_map = self.config.address_mapping[0]  # asumo un solo mapping
             addr_key = (
                 row.get(addr_map["street"]),
                 row.get(addr_map["city"]),
                 row.get(addr_map["state"]),
                 row.get(addr_map["code"]),
             )
+
             address = None
             if addr_key != ('', '', '', ''):
                 if addr_key in self._address_cache:
                     address = self._address_cache[addr_key]
                 else:
-                    address = Address.from_row(
-                        row,
-                        addr_map,
-                        customer_name=customer.name
-                    )
+                    address = Address.from_row(row, addr_map, customer_name=customer.name)
                     self._address_cache[addr_key] = address
 
             # 2.2) Contact(es) con caché
             contacts = []
             for mapping in self.config.contact_mapping:
-                if not row.get(mapping["coverage"]):
+                if row.get(mapping["coverage"]) == '' or (row.get(mapping["first_name"]) == '' and row.get(mapping["last_name"])) == '':
                     continue
 
                 fn = row.get(mapping["first_name"])
@@ -71,46 +62,62 @@ class PolicyAssembler:
                 dob = row.get(mapping["day_of_birth"])
                 contact_key = (fn, ln, dob)
 
-                if contact_key in self._contact_cache:
-                    contact = self._contact_cache[contact_key]
+                relations_in_spanish = {
+                    "ABUELO(A)": "Grandparent",
+                    "HERMANO(A)": "Sibling",
+                    "HIJO(A)": "Child",
+                    "NIETO(A)": "Grandchild",
+                    "PADRE/MADRE": "Parent",
+                    "SOBRINO(A)": "Cousin",
+                    "SUEGRO(O)": "Parent-In-Law",
+                    "TIO(A)": "Uncle/Aunt",
+                    "HIJASTRO(A)": "Stepchild",
+                    "CUÑADO(A)": "Nibling",
+                    "OTRO": "Other",
+                    "YERNO/NUERA": "Nibling",
+                    "PRIMO(A)": "Cousin",
+                }
+                
+                relationship = relations_in_spanish.get(row.get(mapping["relationship"]), mapping["relationship"])
+
+                if mapping["relationship"] == "Owner":
+                    relationship = "Owner"
+                elif mapping["relationship"] == "Spouse":
+                    relationship = "Spouse"
                 else:
-                    contact = Contact.from_row(
-                        row,
-                        mapping,
-                        customer_name=customer.name
-                    )
+                    relationship = relations_in_spanish.get(row.get(mapping["relationship"]))
+
+                if contact_key in self._contact_cache:
+                    contact = self._contact_cache[contact_key]  
+                else:
+                    contact = Contact.from_row(row, mapping, customer_name=customer.name)
                     self._contact_cache[contact_key] = contact
 
+                contact.relationship = relationship
                 contacts.append(contact)
-            
-            # 2.3) Item (siempre uno nuevo)
+
+            # 2.3) Item
             item = Item.from_row(row, *self.config.item_mapping)
 
+            # 2.4) Documentos asociados a contactos
             documents = {
-                key: value
-                for key, value in {
-                    row.get("document_person_1"): row.get("document_name_1"),
-                    row.get("document_person_2"): row.get("document_name_2"),
-                    row.get("document_person_3"): row.get("document_name_3"),
-                    row.get("document_person_4"): row.get("document_name_4"),
-                    row.get("document_person_5"): row.get("document_name_5"),
-                }.items()
-                if value not in (None, '')
+                row.get(f"document_person_{i}"): row.get(f"document_name_{i}")
+                for i in range(1, 6)
+                if row.get(f"document_name_{i}", None) not in (None, '')
             }
 
             for doc_person, doc_type in documents.items():
-                valid_names = [ contact.name.split("-")[0] for contact in contacts ]
+                valid_names = [c.name.split("-")[0] for c in contacts]
                 parser = SimpleNameResolver(valid_names=valid_names if valid_names else [self.customer.name])
                 [chunk] = parser.process_text(doc_person)
                 target_name = chunk.get("matched")
 
                 contact = next((c for c in contacts if c.name.startswith(target_name)), None)
-                
                 if contact:
                     contact.document_type.append(doc_type)
-                    contact.document_deadline = row.get("document_deadline")
+                    contact.document_deadline = getattr(row, "document_deadline", None)
 
-            # 2.4) SalesOrder para esta fila
+            # 2.5) Crear SalesOrder
             SalesOrder.from_row(
                 row,
                 contacts=contacts,
@@ -119,44 +126,22 @@ class PolicyAssembler:
                 address_name=address.name if address else None,
             )
 
-        logging.info(
-            f"✅ Policy assembled for contact {contact_id}: "
+        tqdm.write(
+            f"Policy assembled for contact {contact_id}: "
             f"{len(rows)} orders, "
             f"{len(self._contact_cache)} contacts, "
             f"{len(self._address_cache)} addresses created"
         )
-        
-    def create_issue(
-        self,
-        subject: str,
-        status: str,
-        raw_description: str,
-        raw_solution: str,
-    ):
-        """
-        Break raw_description into batches, parse each batch into issues, then
-        for each issue spawn batched tasks if raw_solution is provided.
-        """
-        # batch‐parse the description into Issue objects
-        self._create_issues_in_batches(subject, status, raw_description)
 
-        # if there is a solution, batch‐create the tasks for all those issues
+    def create_issue(self, subject: str, status: str, raw_description: str, raw_solution: str):
+        self._create_issues_in_batches(subject, status, raw_description)
         if raw_solution:
             for issue in self._issued_issues:
                 self._create_tasks_in_batches(issue.name, raw_solution)
-
-        # once done, clear the issue list and collect
         del self._issued_issues
         gc.collect()
 
-    def _create_issues_in_batches(
-        self,
-        subject: str,
-        status: str,
-        raw_description: str,
-        batch_size: int = 50
-    ):
-        """Split raw_description into line‐batches, parse, and emit Issue.from_row."""
+    def _create_issues_in_batches(self, subject: str, status: str, raw_description: str, batch_size: int = 50):
         lines = raw_description.splitlines()
         batch: list[str] = []
         self._issued_issues: list[Issue] = []
@@ -166,16 +151,10 @@ class PolicyAssembler:
             if i % batch_size == 0:
                 self._flush_issue_batch(subject, status, batch)
 
-        # flush any remainder
         if batch:
             self._flush_issue_batch(subject, status, batch)
 
-    def _flush_issue_batch(
-        self,
-        subject: str,
-        status: str,
-        batch: list[str]
-    ):
+    def _flush_issue_batch(self, subject: str, status: str, batch: list[str]):
         text = "\n".join(batch)
         for chunk in self.parser.process_text(text):
             issue = Issue.from_row(
@@ -189,18 +168,11 @@ class PolicyAssembler:
             logging.info(f"Created issue: {issue.name}")
             self._issued_issues.append(issue)
 
-        # free immediately
         del text
         batch.clear()
         gc.collect()
 
-    def _create_tasks_in_batches(
-        self,
-        issue_name: str,
-        raw_solution: str,
-        batch_size: int = 50
-    ):
-        """Split raw_solution into line‐batches, parse, and emit Task.from_row."""
+    def _create_tasks_in_batches(self, issue_name: str, raw_solution: str, batch_size: int = 50):
         lines = raw_solution.splitlines()
         batch: list[str] = []
 
@@ -212,11 +184,7 @@ class PolicyAssembler:
         if batch:
             self._flush_task_batch(issue_name, batch)
 
-    def _flush_task_batch(
-        self,
-        issue_name: str,
-        batch: list[str]
-    ):
+    def _flush_task_batch(self, issue_name: str, batch: list[str]):
         text = "\n".join(batch)
         for chunk in self.parser.process_text(text):
             Task.from_row(
@@ -227,7 +195,6 @@ class PolicyAssembler:
             )
             logging.info(f"Created task for issue {issue_name}, assignee {chunk['name']}")
 
-        # free immediately
         del text
         batch.clear()
         gc.collect()

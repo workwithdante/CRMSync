@@ -32,6 +32,9 @@ class Address(DocTypeHandler):
 
     def get_filters(self):
         return None
+
+    def get_filters_child(self):
+        return None
     
     def get_existing_name(self):
         fulladdress = self._full_address()
@@ -57,4 +60,4 @@ class Address(DocTypeHandler):
         return data
 
     def _full_address(self):
-        return ", ".join(filter(None, [self.street, self.city, self.state, self.code]))
+        return ", ".join(filter(None, [self.street, self.city, self.state, str(int(self.code))]))

@@ -32,6 +32,9 @@ class Item(DocTypeHandler):
     def get_filters(self):
         #return [["Item", "item_code", "=", self.variant_code()]]
         return None
+
+    def get_filters_child(self):
+        return None
     
     def get_existing_name(self):
         # Aquí puedes definir cómo se extrae el nombre del resultado

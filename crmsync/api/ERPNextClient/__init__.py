@@ -1,5 +1,6 @@
 import json
 import requests
+from tqdm import tqdm
 
 class ERPNextClient:
     """
@@ -122,7 +123,7 @@ class ERPNextClient:
             if "application/json" in response.headers.get("Content-Type", ""):
                 body = response.json()
                 if body.get("exc_type") == "DoesNotExistError":
-                    print(f"🔍 {doctype} '{name}' not found (DoesNotExistError).")
+                    tqdm.write(f"🔍 {doctype} '{name}' not found (DoesNotExistError).")
                     return None
 
             # Ahora sí, si no es DoesNotExistError, lanza error si corresponde
@@ -157,7 +158,7 @@ class ERPNextClient:
         try:
             response = self.session.post(url, data=json.dumps(data))
             response.raise_for_status()
-            print(f"✅ Created {doctype}: {response.json()['data']['name']}")
+            tqdm.write(f"✅ Created {doctype}: {response.json()['data']['name']}")
             return response.json()
         except requests.exceptions.HTTPError as e:
             print(f"❌ Failed to create {doctype}: {e}")

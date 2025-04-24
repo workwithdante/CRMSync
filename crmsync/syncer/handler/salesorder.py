@@ -55,8 +55,8 @@ class SalesOrder(DocTypeHandler):
     def normalize_fields(self):
         self.custom_consent = self.custom_consent if self.custom_consent != 'Email Send' else "Email Sent"
 
-        delivery = datetime.strptime(self.delivery_date, "%Y-%m-%d").date()
-        transaction = datetime.strptime(self.transaction_date, "%Y-%m-%d").date()
+        delivery = self.delivery_date
+        transaction = self.transaction_date if self.transaction_date != 'None' else self.delivery_date
 
         if transaction > delivery:
             self.transaction_date = self.delivery_date
@@ -68,6 +68,18 @@ class SalesOrder(DocTypeHandler):
             ["Sales Order", "custom_expiry_date", "=", self.custom_expiry_date],
             ["Sales Order", "status", "not in", ["Closed", "Cancelled"]],
         ]
+
+    def get_filters_child(self):
+        return [
+            {
+                "doctype": "custom_dependents",
+                "conditions": {
+                    "contact": [contact.name for contact in self.contacts if contact.relationship == 'Owner'],
+                    "relationship": ["Owner"]
+                }
+            }
+        ]
+
 
     def get_existing_name(self):
         return None
@@ -92,7 +104,7 @@ class SalesOrder(DocTypeHandler):
                     "uom": "Nos",                
                     "conversion_factor": 1.0,    
                     "qty": 1.0,
-                    "rate": self.rate,
+                    "rate": float(self.rate) if self.rate else 0.0,
                 },
             ],
             "shipping_address_name": self.shipping_address_name if self.shipping_address_name else "",
@@ -130,7 +142,7 @@ class SalesOrder(DocTypeHandler):
                     "relationship": contact.relationship,
                     "social_security_number": contact.social_security_number,
                     "job_type": contact.job_type,
-                    "income": contact.income,
+                    "income": float(contact.income) if contact.income else 0.0,
                     "migratory_status": contact.migratory_status,
                     "smoke": contact.smoke,
                     "been_in_jail": contact.been_in_jail,

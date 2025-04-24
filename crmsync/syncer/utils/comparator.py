@@ -48,30 +48,42 @@ class DictComparator:
             return v not in (None, '', 0, 0.0)
 
         def normalize(v: Any) -> Any:
-            """Convierte valores no-significativos a None, deja los demás intactos."""
             return v if is_significant(v) else None
 
-        def identity(item: Dict[str, Any]):
-            """Tupla de valores normalizados, en el orden de keys."""
-            return tuple(normalize(item.get(k)) for k in keys)
+        def clean_item(item: Dict[str, Any]) -> Dict[str, Any]:
+            return {k: normalize(item.get(k)) for k in keys}
 
-        # Construye los Counters sobre las identidades normalizadas
-        new_ids      = [identity(i) for i in new_list]
-        existing_ids = [identity(i) for i in existing_list]
+        new_cleaned = [clean_item(i) for i in new_list]
+        existing_cleaned = [clean_item(i) for i in existing_list]
 
-        new_counts      = Counter(new_ids)
+        new_ids = [tuple(i.values()) for i in new_cleaned]
+        existing_ids = [tuple(i.values()) for i in existing_cleaned]
+
+        from collections import Counter
+        new_counts = Counter(new_ids)
         existing_counts = Counter(existing_ids)
 
-        # 1) ¿Hay algo que agregar? (new tiene más de existing)
-        for id_, cnt in new_counts.items():
-            if cnt > existing_counts.get(id_, 0):
-                print(f"To add (new > existing): {id_} count_diff={cnt-existing_counts.get(id_,0)}")
-                return True
+        # Mostrar diferencias campo por campo si hay nuevas entradas
+        for n_item in new_cleaned:
+            if n_item not in existing_cleaned:
+                similar = next((e_item for e_item in existing_cleaned if e_item.get("contact") == n_item.get("contact")), None)
+                if similar:
+                    diffs = {
+                        k: (similar[k], n_item[k])
+                        for k in keys
+                        if similar.get(k) != n_item.get(k)
+                    }
+                    print(f"➕ To add: {tuple(n_item.values())} (x1)")
+                    for field, (old, new) in diffs.items():
+                        print(f"   ↪ Campo '{field}': '{old}' → '{new}'")
+                    return True
+                else:
+                    print(f"➕ To add: {tuple(n_item.values())} (x1)")
+                    return True
 
-        # 2) ¿Hay algo que remover? (existing tiene más de new)
-        for id_, cnt in existing_counts.items():
-            if cnt > new_counts.get(id_, 0):
-                print(f"To remove (existing > new): {id_} count_diff={cnt-new_counts.get(id_,0)}")
+        for e_item in existing_cleaned:
+            if e_item not in new_cleaned:
+                print(f"➖ To remove: {tuple(e_item.values())} (x1)")
                 return True
 
         return False

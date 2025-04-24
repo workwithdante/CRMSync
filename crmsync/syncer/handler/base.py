@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+import logging
 from typing import Optional
+
+from tqdm import tqdm
 
 from crmsync.syncer.utils.comparator import DictComparator
 
@@ -18,6 +21,11 @@ class DocTypeHandler(ABC):
     @abstractmethod
     def get_filters(self) -> list:
         """Filtros para buscar si el documento ya existe."""
+        pass
+
+    @abstractmethod
+    def get_filters_child(self) -> list:
+        """Filtros para buscar si el documento ya existe en los hijos."""
         pass
 
     @abstractmethod
@@ -39,6 +47,7 @@ class DocTypeHandler(ABC):
         filters = self.get_filters()
         name = self.get_existing_name()
         new_data = self.build_data()
+        filters_child = self.get_filters_child()
 
         special_fields = {"links", "email_ids", "phone_nos", "attributes"}  # ← ya se comparan aparte
 
@@ -66,6 +75,33 @@ class DocTypeHandler(ABC):
             fields=fields_list
         )
 
+        if existing and filters_child:
+                def match_child_filter(child_list, filters_child):
+                    if not child_list:
+                        return False
+
+                    for filter_group in filters_child:
+                        if not isinstance(filter_group, dict):
+                            continue  # seguridad
+
+                        table = filter_group.get("doctype")
+                        conditions: dict = filter_group.get("conditions", {})
+
+                        for row in child_list:
+                            match_all = True
+                            for field, expected_values in conditions.items():
+                                if row.get(field) not in expected_values:
+                                    match_all = False
+                                    break
+                            if match_all:
+                                return True  # al menos una fila cumple todas las condiciones
+
+                    return False  # ninguna fila coincidió completamente
+                
+                dependents = existing.get("custom_dependents", [])
+                if not match_child_filter(dependents, filters_child):
+                    existing = None
+
         if existing:
             existing = existing if isinstance(existing, dict) else existing.get("data")
 
@@ -82,7 +118,7 @@ class DocTypeHandler(ABC):
 
             changes = comparator.compare_dicts(new_data, existing)
 
-            if changes:
+            if changes != {}:
                 if list(changes.keys()) == ["items"]:
                     client.doUpdateItems(
                         parent_doctype=self.doctype,
@@ -94,10 +130,7 @@ class DocTypeHandler(ABC):
                 self.name = self.extract_name(updated.get("data"))
             else:
                 self.name = self.extract_name(existing)
-            
-            print(f"Actualizando {self.doctype}: {self.name}")
-
         else:
             created = client.doCreate(self.doctype, new_data)
             self.name = self.extract_name(created.get("data"))
-            print(f"Creando {self.doctype}: {self.name}")
+            tqdm.write(f"Creating {self.doctype}: {self.name}")

@@ -1,9 +1,26 @@
 name: crmsync
 channels:
+  - rapidsai
+  - nvidia
   - conda-forge
   - defaults
+
 dependencies:
-  - python=3.12.*
+  - python=3.10
+  - cudf=24.04
+  - numpy=1.26
+  - pyarrow
+  - pandas
+  - sqlalchemy
+  - pymysql
+  - python-dotenv
+  - spacy
+  - rapidfuzz
+  - cleantext
+  - ftfy
+  - tqdm
+  - requests
+  - rich
   - pip
   - pip:
       - "poetry>=1.2"

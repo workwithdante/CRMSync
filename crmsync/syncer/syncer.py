@@ -2,8 +2,10 @@ import math
 import os
 import json
 import random
+from typing import Iterator
 import spacy
 from spacy.tokens import DocBin
+from tqdm import tqdm
 
 from crmsync.config import SyncConfig
 from database.services.query import QueryService
@@ -35,89 +37,59 @@ class Syncer:
                 # 2) Entrenar el modelo NER de SpaCy
                 #self._train_ner_model("model")
 
-                for contact_id, group in df.groupby("contact_id"):
+                for contact_id, group in tqdm(df.groupby("contact_id"), desc="Procesando contactos"):
                     PolicyAssembler(self.config, contact_id, group)
-                    """
-                    df_issues = self.query_service.fetch_issues(uow, contact_id)
-                    for _, ticket in df_issues.iterrows():
-                        subject = ticket.loc["title"]
-                        status = ticket.loc["status"]
-                        raw_description = ticket.loc["description"]
-                        raw_solution = ticket.loc["solution"]
-                        pa.create_issue(subject, status, raw_description, raw_solution)
-                    """
-
+                    # Si deseas procesar tickets también, descomenta:
+                    # df_issues = self.query_service.fetch_issues(uow, contact_id)
+                    # for ticket in df_issues.itertuples(index=False):
+                    #     pa.create_issue(ticket.title, ticket.status, ticket.description, ticket.solution)
 
         except Exception as e:
             logger.error(f"Sync failed: {e}")
             return False
         return True
-    
-    def recursive_join(self, query, join_list):
-        """
-        Función recursiva que añade JOINs a la consulta.
 
-        :param query: Consulta base.
-        :param join_list: Lista de tuplas (modelo, condición de join).
-        :return: Consulta con los JOINs aplicados.
-        """
+    def recursive_join(self, query, join_list):
         if not join_list:
             return query
         model, condition = join_list[0]
         new_query = query.join(model, condition)
         return self.recursive_join(new_query, join_list[1:])
 
-
-    def _convert_json_to_spacy(self,
-                            train_spacy: str = "train.spacy",
-                            dev_spacy: str = "dev.spacy",
-                            split_ratio: float = 0.8,
-                            base_model: str = "es_core_news_lg"):
-        """
-        Convierte dataset.json en train.spacy y dev.spacy (dividido automáticamente).
-        """
+    def _convert_json_to_spacy(self, train_spacy="train.spacy", dev_spacy="dev.spacy", split_ratio=0.8, base_model="es_core_news_lg"):
         nlp = spacy.load(base_model, exclude=["tok2vec", "tagger", "parser"])
 
-        current_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model/dataset")
-        filename = os.path.join(current_dir, "dataset.json")
+        dataset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model/dataset")
+        filename = os.path.join(dataset_dir, "dataset.json")
 
         with open(filename, 'r', encoding='utf-8') as input_json:
             data = json.load(input_json)
 
-        random.shuffle(data)  # Mezclar los datos antes de dividir
-
-        # Dividir dataset según split_ratio
+        random.shuffle(data)
         split_point = math.ceil(len(data) * split_ratio)
-        train_data = data[:split_point]
-        dev_data = data[split_point:]
+        train_data, dev_data = data[:split_point], data[split_point:]
 
         def create_docbin(data_subset):
             db = DocBin()
             for entry in data_subset:
                 doc = nlp.make_doc(entry["text"])
-                ents = []
-                for start, end, label in entry["entities"]:
-                    span = doc.char_span(start, end, label=label)
-                    if span:
-                        ents.append(span)
+                ents = [
+                    span for start, end, label in entry["entities"]
+                    if (span := doc.char_span(start, end, label=label))
+                ]
                 doc.ents = ents
                 db.add(doc)
             return db
 
-        # Crear y guardar train.spacy
-        train_db = create_docbin(train_data)
-        train_db.to_disk(train_spacy)
+        create_docbin(train_data).to_disk(train_spacy)
         print(f"✅ Saved {train_spacy} successfully (train set)")
 
-        # Crear y guardar dev.spacy
-        dev_db = create_docbin(dev_data)
-        dev_db.to_disk(dev_spacy)
+        create_docbin(dev_data).to_disk(dev_spacy)
         print(f"✅ Saved {dev_spacy} successfully (dev set)")
 
-    def _train_ner_model(self, output_dir: str = "model", config_path: str = "model/config.cfg"):
+    def _train_ner_model(self, output_dir="model", config_path="model/config.cfg"):
         from pathlib import Path
         import subprocess
-        import os
 
         current_dir = os.path.dirname(os.path.abspath(__file__))
         output_full_dir = os.path.join(current_dir, output_dir)
@@ -125,16 +97,13 @@ class Syncer:
         train_spacy = os.path.join(current_dir, "model/dataset/train.spacy")
         dev_spacy = os.path.join(current_dir, "model/dataset/dev.spacy")
 
-        # 1) Crear config.cfg si no existe
         if not Path(config_full_path).exists():
-            self._convert_json_to_spacy(train_spacy=train_spacy, dev_spacy=dev_spacy, split_ratio=0.75)
-
+            self._convert_json_to_spacy(train_spacy, dev_spacy, 0.75)
             subprocess.run([
                 "python", "-m", "spacy", "init", "config", config_path,
                 "--lang", "es", "--pipeline", "ner", "--optimize", "accuracy"
             ], check=True)
 
-        # 2) Ejecutar entrenamiento en CPU (sin --gpu-id) si no existe el directorio de salida
         model_full_dir = os.path.join(current_dir, output_dir, "model-best")
         if not Path(model_full_dir).exists():
             cmd = [
@@ -142,7 +111,7 @@ class Syncer:
                 "--output", output_full_dir
             ]
             try:
-                result = subprocess.run(cmd, check=True)
+                result = subprocess.run(cmd, check=True, capture_output=True, text=True)
                 print("✅ Training completed successfully on CPU\n")
                 print(result.stdout)
             except subprocess.CalledProcessError as e:

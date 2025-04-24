@@ -44,6 +44,9 @@ class Issue(DocTypeHandler):
             ["Issue", "customer", "=", self.customer_name],
         ]
     
+    def get_filters_child(self):
+        return None
+    
     def get_existing_name(self):
         return None
 
