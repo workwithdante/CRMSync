@@ -73,10 +73,10 @@ class SalesOrder(DocTypeHandler):
     def get_filters_child(self):
         return [
             {
-                "doctype": "custom_dependents",
+                "childtable": "custom_dependents",
                 "conditions": {
                     "contact": [contact.name for contact in self.contacts],
-                    "relationship": ["Owner"]
+                    "relationship": [contact.relationship for contact in self.contacts],
                 }
             }
         ] if self.contacts else []

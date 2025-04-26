@@ -76,36 +76,36 @@ class DocTypeHandler(ABC):
         )
 
         if existing and filters_child:
-                def match_child_filter_strict_exact(child_list, filters_child):
-                    if not child_list or len(child_list) != len(filters_child):
+            def match_child_filter_strict_exact(dependents, filters_child):
+                if not filters_child or not dependents:
+                    return False
+
+                for filter_group in filters_child:
+                    childtable = filter_group.get("childtable")
+                    conditions = filter_group.get("conditions", {})
+
+                    expected_contacts = conditions.get("contact", [])
+                    expected_relationships = conditions.get("relationship", [])
+
+                    if not expected_contacts or not expected_relationships:
                         return False
 
-                    for required_conditions in filters_child:
-                        if not isinstance(required_conditions, dict):
-                            continue
+                    # Si hay más dependents que expected, cortamos los dependents solo a los que queremos comparar
+                    subset_dependents = dependents[:len(expected_contacts)]
 
-                        conditions: dict = required_conditions.get("conditions", {})
-                        doctype = required_conditions.get("doctype")
+                    # Primero, validar tamaños
+                    if len(subset_dependents) != len(expected_contacts):
+                        return False
 
-                        match_found = False
-
-                        for row in child_list:
-                            if row.get("doctype") != doctype:
-                                continue
-
-                            if all(row.get(field) in expected_values for field, expected_values in conditions.items()):
-                                match_found = True
-                                break
-
-                        if not match_found:
-                            # No encontramos ningún row que cumpla este grupo de condiciones
+                    for dep, exp_contact, exp_relationship in zip(subset_dependents, expected_contacts, expected_relationships):
+                        if dep.get("contact") != exp_contact or dep.get("relationship") != exp_relationship:
                             return False
 
-                    return True
-                
-                dependents = existing.get("custom_dependents", [])
-                if not match_child_filter_strict_exact(dependents, filters_child):
-                    existing = None
+                return True
+
+            dependents = existing.get("custom_dependents", [])
+            if not match_child_filter_strict_exact(dependents, filters_child):
+                existing = None
 
         if existing:
             existing = existing if isinstance(existing, dict) else existing.get("data")

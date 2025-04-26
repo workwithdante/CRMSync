@@ -85,7 +85,7 @@ class PolicyAssembler:
                 elif mapping["relationship"] == "Spouse":
                     relationship = "Spouse"
                 else:
-                    relationship = relations_in_spanish.get(row.get(mapping["relationship"]))
+                    relationship = relations_in_spanish.get(row.get(mapping["relationship"]), "Other")
 
                 if contact_key in self._contact_cache:
                     contact = self._contact_cache[contact_key]  
