@@ -130,7 +130,7 @@ class Contact(DocTypeHandler):
         if self.social_security_number:
             clean_ssn = re.sub(r'\D', '', self.social_security_number).zfill(9) if self.social_security_number else None
             if len(clean_ssn) <= 9:
-                data["social_security_number"] = clean_ssn
+                data["custom_social_security_number"] = clean_ssn
             else:
                 raise ValueError("Social Security Number must be 8 digits long.")
         

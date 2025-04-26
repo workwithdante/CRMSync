@@ -76,30 +76,35 @@ class DocTypeHandler(ABC):
         )
 
         if existing and filters_child:
-                def match_child_filter(child_list, filters_child):
-                    if not child_list:
+                def match_child_filter_strict_exact(child_list, filters_child):
+                    if not child_list or len(child_list) != len(filters_child):
                         return False
 
-                    for filter_group in filters_child:
-                        if not isinstance(filter_group, dict):
-                            continue  # seguridad
+                    for required_conditions in filters_child:
+                        if not isinstance(required_conditions, dict):
+                            continue
 
-                        table = filter_group.get("doctype")
-                        conditions: dict = filter_group.get("conditions", {})
+                        conditions: dict = required_conditions.get("conditions", {})
+                        doctype = required_conditions.get("doctype")
+
+                        match_found = False
 
                         for row in child_list:
-                            match_all = True
-                            for field, expected_values in conditions.items():
-                                if row.get(field) not in expected_values:
-                                    match_all = False
-                                    break
-                            if match_all:
-                                return True  # al menos una fila cumple todas las condiciones
+                            if row.get("doctype") != doctype:
+                                continue
 
-                    return False  # ninguna fila coincidió completamente
+                            if all(row.get(field) in expected_values for field, expected_values in conditions.items()):
+                                match_found = True
+                                break
+
+                        if not match_found:
+                            # No encontramos ningún row que cumpla este grupo de condiciones
+                            return False
+
+                    return True
                 
                 dependents = existing.get("custom_dependents", [])
-                if not match_child_filter(dependents, filters_child):
+                if not match_child_filter_strict_exact(dependents, filters_child):
                     existing = None
 
         if existing:

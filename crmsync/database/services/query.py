@@ -27,7 +27,7 @@ class QueryService:
         result = uow.execute(text("SELECT VERSION();"))
         return result.fetchone()[0]
 
-    def fetch_records(self, uow, limit_contacts: int = 10) -> DataFrame:
+    def fetch_records(self, uow, limit_contacts: int = 100) -> DataFrame:
         # ----------- 0) JOIN definitions -----------
         joins = [
             (VTigerSalesOrder, VTigerSalesOrderCF.salesorderid == VTigerSalesOrder.salesorderid),
@@ -78,6 +78,7 @@ class QueryService:
         base_q = uow.query(
             customer_name_col,
             VTigerSalesOrder.salesorderid,
+            VTigerSalesOrder.subject,
             VTigerSalesOrder.contactid.label("contact_id"),
             *dynamic_columns,
             VTigerSalesOrderCF,

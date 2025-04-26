@@ -75,7 +75,7 @@ class SalesOrder(DocTypeHandler):
             {
                 "doctype": "custom_dependents",
                 "conditions": {
-                    "contact": [contact.name for contact in self.contacts if contact.relationship == 'Owner'],
+                    "contact": [contact.name for contact in self.contacts],
                     "relationship": ["Owner"]
                 }
             }

@@ -106,9 +106,13 @@ class PolicyAssembler:
                 if row.get(f"document_name_{i}", None) not in (None, '')
             }
 
-            for doc_person, doc_type in documents.items():
-                valid_names = [c.name.split("-")[0] for c in contacts]
+            parser = None
+
+            if documents or not contacts:
+                valid_names = [c.name.split("-")[0] for c in self._contact_cache.values()]
                 parser = SimpleNameResolver(valid_names=valid_names if valid_names else [self.customer.name])
+
+            for doc_person, doc_type in documents.items():
                 [chunk] = parser.process_text(doc_person)
                 target_name = chunk.get("matched")
 
@@ -116,6 +120,15 @@ class PolicyAssembler:
                 if contact:
                     contact.document_type.append(doc_type)
                     contact.document_deadline = getattr(row, "document_deadline", None)
+            
+            if parser and not contacts and self._contact_cache:
+                [chunk] = parser.process_text(row.get("subject", self.customer.name))
+                target_name = chunk.get("matched")
+                contact = next((c for c in self._contact_cache.values() if c.name.startswith(target_name)), None)
+                contact.relationship = "Owner"
+                contacts.append(contact)
+
+
 
             # 2.5) Crear SalesOrder
             SalesOrder.from_row(
