@@ -113,17 +113,11 @@ class Contact(DocTypeHandler):
         return self.full_name()
 
     def build_data(self):
-        if self.social_security_number and len(re.sub(r'\D', '', self.social_security_number)) > 0:
-            clean_ssn = re.sub(r'\D', '', self.social_security_number).zfill(9) if self.social_security_number else None
-            if len(clean_ssn) > 9:
-                raise ValueError("Social Security Number must be 8 digits long.") 
-        
         data = {
             "first_name": self.first_name,
             "last_name": self.last_name,
             "middle_name": self.middle_name,
             "custom_day_of_birth": self.day_of_birth,
-            "custom_social_security_number": clean_ssn if self.social_security_number else None,
             "gender": self.gender,
             "links": [
                 {
@@ -132,6 +126,13 @@ class Contact(DocTypeHandler):
                 }
             ]
         }
+
+        if self.social_security_number:
+            clean_ssn = re.sub(r'\D', '', self.social_security_number).zfill(9) if self.social_security_number else None
+            if len(clean_ssn) <= 9:
+                data["social_security_number"] = clean_ssn
+            else:
+                raise ValueError("Social Security Number must be 8 digits long.")
         
         if self.relationship == "Owner":
             data["is_primary_contact"] = 1

@@ -66,6 +66,7 @@ class SalesOrder(DocTypeHandler):
             ["Sales Order", "customer", "=", self.customer_name],
             ["Sales Order", "delivery_date", "=", self.delivery_date],
             ["Sales Order", "custom_expiry_date", "=", self.custom_expiry_date],
+            ["Sales Order", "custom_ffm_app_id", "=", self.custom_ffm_app_id],
             ["Sales Order", "status", "not in", ["Closed", "Cancelled"]],
         ]
 
@@ -78,7 +79,7 @@ class SalesOrder(DocTypeHandler):
                     "relationship": ["Owner"]
                 }
             }
-        ]
+        ] if self.contacts else []
 
 
     def get_existing_name(self):
