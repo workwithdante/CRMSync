@@ -27,7 +27,7 @@ class QueryService:
         result = uow.execute(text("SELECT VERSION();"))
         return result.fetchone()[0]
 
-    def fetch_records(self, uow, limit_contacts: int = 100) -> DataFrame:
+    def fetch_records(self, uow, limit_contacts: int = 500) -> DataFrame:
         # ----------- 0) JOIN definitions -----------
         joins = [
             (VTigerSalesOrder, VTigerSalesOrderCF.salesorderid == VTigerSalesOrder.salesorderid),
@@ -93,7 +93,7 @@ class QueryService:
         # ----------- 5) Orden final -----------
         q = q.order_by(
             VTigerSalesOrder.contactid.asc(),
-            VTigerCRMEntity.createdtime.desc()
+            VTigerCRMEntity.createdtime.asc()
         )
 
         # ----------- 6) Ejecutar y retornar -----------

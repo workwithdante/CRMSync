@@ -67,6 +67,10 @@ class DocTypeHandler(ABC):
                 fields_list += expand_child_fields(key, value)
             else:
                 fields_list.append(key)
+
+        if self.doctype == "Contact":
+            fields_list.remove("email_ids") if "email_ids" in fields_list else None
+            fields_list.remove("phone_nos") if "phone_nos" in fields_list else None
         
         existing = client.doQuery(
             self.doctype,

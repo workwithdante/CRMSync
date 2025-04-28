@@ -72,7 +72,12 @@ class Contact(DocTypeHandler):
         
         self.coverage = coverage_list.get(self.coverage) if self.coverage else "Other"
             
-        self.social_security_number = self.social_security_number.replace("-", "") if self.social_security_number else None
+        if self.social_security_number:
+            clean_ssn = re.sub(r'\D', '', self.social_security_number).zfill(9) if self.social_security_number else None
+            if len(clean_ssn) <= 9:
+                self.social_security_number = clean_ssn
+            else:
+                raise ValueError("Social Security Number must be 8 digits long.")
         
         document_list_in_spanish = {
             "CIUDADANO": "Passport",
@@ -104,10 +109,19 @@ class Contact(DocTypeHandler):
         self.mobile_no = re.sub(r'\D', '', self.mobile_no) if self.mobile_no else None
         
     def get_filters(self):
+        filters = [
+            ["Contact", "full_name", "like", " ".join(filter(None, [self.first_name, self.middle_name, self.last_name])) + "%"],
+            ["Contact", "custom_day_of_birth", "=", self.day_of_birth],
+        ]
+
+        if self.social_security_number:
+            filters.append(["Contact", "custom_social_security_number", "=", self.social_security_number])
+        
         return None
 
     def get_filters_child(self):
         return None
+
     
     def get_existing_name(self):
         return self.full_name()
@@ -126,13 +140,6 @@ class Contact(DocTypeHandler):
                 }
             ]
         }
-
-        if self.social_security_number:
-            clean_ssn = re.sub(r'\D', '', self.social_security_number).zfill(9) if self.social_security_number else None
-            if len(clean_ssn) <= 9:
-                data["custom_social_security_number"] = clean_ssn
-            else:
-                raise ValueError("Social Security Number must be 8 digits long.")
         
         if self.relationship == "Owner":
             data["is_primary_contact"] = 1

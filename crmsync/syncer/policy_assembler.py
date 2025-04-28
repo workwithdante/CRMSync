@@ -113,13 +113,14 @@ class PolicyAssembler:
                 parser = SimpleNameResolver(valid_names=valid_names if valid_names else [self.customer.name])
 
             for doc_person, doc_type in documents.items():
-                [chunk] = parser.process_text(doc_person)
-                target_name = chunk.get("matched")
+                if doc_person != '':
+                    [chunk] = parser.process_text(doc_person)
+                    target_name = chunk.get("matched")
 
-                contact = next((c for c in contacts if c.name.startswith(target_name)), None)
-                if contact:
-                    contact.document_type.append(doc_type)
-                    contact.document_deadline = getattr(row, "document_deadline", None)
+                    contact = next((c for c in contacts if c.name.startswith(target_name)), None)
+                    if contact:
+                        contact.document_type.append(doc_type)
+                        contact.document_deadline = getattr(row, "document_deadline", None)
             
             if parser and not contacts and self._contact_cache:
                 [chunk] = parser.process_text(row.get("subject", self.customer.name))

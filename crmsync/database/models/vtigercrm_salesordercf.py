@@ -48,7 +48,18 @@ class VTigerSalesOrderCF(Base):
 # Funciones de transformación SQL
 
 def sql_transform_text(column):
-    return func.concat(func.upper(func.left(func.trim(column), 1)), func.lower(func.substring(func.trim(column), 2)))
+    # 1) Trim y colapsar múltiples espacios en uno
+    no_double_spaces = func.regexp_replace(
+        func.trim(column),
+        r'\\s+',   # expresión regular: uno o más espacios
+        ' '        # reemplázalo por un único espacio
+    )
+    # 2) Primera letra en mayúscula
+    first_letter = func.upper(func.left(no_double_spaces, 1))
+    # 3) Resto en minúscula
+    rest        = func.lower(func.substring(no_double_spaces, 2))
+    # 4) Concatenar
+    return func.concat(first_letter, rest)
 
 def sql_transform_ssn(column):
     return func.regexp_replace(column, '[^0-9]', '')

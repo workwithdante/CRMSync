@@ -55,20 +55,39 @@ class SalesOrder(DocTypeHandler):
     def normalize_fields(self):
         self.custom_consent = self.custom_consent if self.custom_consent != 'Email Send' else "Email Sent"
 
-        delivery = self.delivery_date
-        transaction = self.transaction_date if self.transaction_date != 'None' else self.delivery_date
+        self.transaction_date = self.transaction_date if self.transaction_date != 'None' and self.transaction_date else self.delivery_date
 
-        if transaction > delivery:
+        if self.transaction_date > self.delivery_date:
             self.transaction_date = self.delivery_date
 
     def get_filters(self):
-        return [
-            ["Sales Order", "customer", "=", self.customer_name],
-            ["Sales Order", "delivery_date", "=", self.delivery_date],
-            ["Sales Order", "custom_expiry_date", "=", self.custom_expiry_date],
-            ["Sales Order", "custom_ffm_app_id", "=", self.custom_ffm_app_id],
-            ["Sales Order", "status", "not in", ["Closed", "Cancelled"]],
-        ]
+        filters = []
+
+        if self.customer_name and self.customer_name != ' ':
+            filters.append(["Sales Order", "customer", "=", self.customer_name])
+        if self.delivery_date and self.delivery_date != ' ':
+            filters.append(["Sales Order", "delivery_date", "=", self.delivery_date])
+        if self.custom_expiry_date and self.custom_expiry_date != ' ':
+            filters.append(["Sales Order", "custom_expiry_date", "=", self.custom_expiry_date])
+        if self.custom_ffm_app_id and self.custom_ffm_app_id != ' ':
+            filters.append(["Sales Order", "custom_ffm_app_id", "=", self.custom_ffm_app_id])
+        if self.custom_subscriber_id and self.custom_subscriber_id != ' ':
+            filters.append(["Sales Order", "custom_subscriber_id", "=", self.custom_subscriber_id])
+        if self.custom_app_review and self.custom_app_review != ' ':
+            filters.append(["Sales Order", "custom_app_review", "=", self.custom_app_review])
+        if self.custom_consent and self.custom_consent != ' ':
+            filters.append(["Sales Order", "custom_consent", "=", self.custom_consent])
+        if self.custom_renew and self.custom_renew != ' ':
+            filters.append(["Sales Order", "custom_renew", "=", self.custom_renew])
+        if self.transaction_date and self.transaction_date != ' ' or self.delivery_date or self.delivery_date != ' ':
+            filters.append(["Sales Order", "transaction_date", "=", self.transaction_date if self.broker != 'Otro Broker' else self.delivery_date])
+        if self.item_name and self.item_name != ' ':
+            filters.append(["Sales Order Item", "item_code", "=", self.item_name])
+        if self.rate and self.rate != ' ':
+            filters.append(["Sales Order Item", "rate", "=", float(self.rate) if self.rate else 0.0])
+
+
+        return filters
 
     def get_filters_child(self):
         return [
@@ -124,7 +143,7 @@ class SalesOrder(DocTypeHandler):
         }
             
         data.setdefault("custom_broker_info", []).append({
-            "broker_name": self.broker,
+            "broker_name": self.broker if self.broker else "",
             "national_producer_number": broker_npn.get(self.broker, 0.0),
             "initial_date": self.delivery_date,
             "end_date": self.custom_expiry_date,
@@ -134,26 +153,26 @@ class SalesOrder(DocTypeHandler):
         for contact in self.contacts:
             if contact.relationship:
                 data.setdefault("custom_dependents", []).append({
-                    "contact": contact.name,
-                    "first_name": contact.first_name,
-                    "middle_name": contact.middle_name,
-                    "last_name": contact.last_name,
-                    "gender": contact.gender,
-                    "day_of_birth": contact.day_of_birth,
-                    "relationship": contact.relationship,
-                    "social_security_number": contact.social_security_number,
-                    "job_type": contact.job_type,
+                    "contact": contact.name if contact.name else "",
+                    "first_name": contact.first_name if contact.first_name else "",
+                    "middle_name": contact.middle_name if contact.middle_name else "",
+                    "last_name": contact.last_name if contact.last_name else "",
+                    "gender": contact.gender if contact.gender else "Male",
+                    "day_of_birth": contact.day_of_birth if contact.day_of_birth else "",
+                    "relationship": contact.relationship if contact.relationship else "",
+                    "social_security_number": contact.social_security_number if contact.social_security_number else "",
+                    "job_type": contact.job_type if contact.job_type else "",
                     "income": float(contact.income) if contact.income else 0.0,
-                    "migratory_status": contact.migratory_status,
-                    "smoke": contact.smoke,
-                    "been_in_jail": contact.been_in_jail,
-                    "coverage": contact.coverage,
-                    "language": contact.language,
+                    "migratory_status": contact.migratory_status if contact.migratory_status else "",
+                    "smoke": contact.smoke if contact.smoke else "",
+                    "been_in_jail": contact.been_in_jail if contact.been_in_jail else "",
+                    "coverage": contact.coverage if contact.coverage else "",
+                    "language": contact.language if contact.language else "",
                 })
             
             if any([contact.member_id, contact.user, contact.password]):
                 data.setdefault("custom_company_info", []).append({
-                    "contact": contact.name,
+                    "contact": contact.name if contact.name else "",
                     "member_id": contact.member_id if contact.member_id else "",
                     "user": contact.user if contact.user else "",
                     "password": contact.password if contact.password else "",
