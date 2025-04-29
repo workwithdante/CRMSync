@@ -101,9 +101,12 @@ class DocTypeHandler(ABC):
                     if len(subset_dependents) != len(expected_contacts):
                         return False
 
-                    for dep, exp_contact, exp_relationship in zip(subset_dependents, expected_contacts, expected_relationships):
-                        if dep.get("contact") != exp_contact or dep.get("relationship") != exp_relationship:
-                            return False
+                    dep = subset_dependents[0]
+                    exp_contact = expected_contacts[0]
+                    exp_relationship = expected_relationships[0] 
+                    
+                    if dep.get("contact") != exp_contact or dep.get("relationship") != exp_relationship:
+                        return False
 
                 return True
 

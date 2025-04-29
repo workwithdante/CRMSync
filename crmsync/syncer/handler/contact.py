@@ -101,9 +101,18 @@ class Contact(DocTypeHandler):
         
         self.gender = self.gender.capitalize() if self.gender else None
         self.language = self.language.capitalize() if self.language else None
+
+        EMAIL_REGEX = re.compile(r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$')
+
+        def validEmail(email: str | None) -> str | None:
+            if not email:
+                return None
+            e = email.strip()
+            return e if EMAIL_REGEX.match(e) else None
+
         
-        self.email1 = self.email1.lower() if self.email1 else None
-        self.email2 = self.email2.lower() if self.email2 else None
+        self.email1 = self.email1.lower() if validEmail(self.email1) else None
+        self.email2 = self.email2.lower() if validEmail(self.email2) else None
         
         self.phone = re.sub(r'\D', '', self.phone) if self.phone else None
         self.mobile_no = re.sub(r'\D', '', self.mobile_no) if self.mobile_no else None

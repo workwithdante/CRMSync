@@ -92,7 +92,7 @@ class QueryService:
 
         # ----------- 5) Orden final -----------
         q = q.order_by(
-            VTigerSalesOrder.contactid.asc(),
+            VTigerSalesOrderCF.cf_2059.desc(),
             VTigerCRMEntity.createdtime.asc()
         )
 

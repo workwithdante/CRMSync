@@ -15,34 +15,60 @@ class VTigerSalesOrderCF(Base):
 
     @staticmethod
     def validText(text: str | None) -> str | None:
-        if text:
-            return text.strip().capitalize()
-        return None
+        if text is None:
+            return None
+
+        cleaned = text.strip()
+        if len(cleaned) <= 1:
+            return None
+
+        return cleaned.capitalize()
 
     @staticmethod
     def validSSN(ssn: str | None) -> str | None:
-        if ssn:
-            return re.sub(r'\D', '', ssn)
-        return None
+        if not ssn:
+            return None
+        cleaned = re.sub(r'\D', '', ssn)
+        # Si queda vacío o un solo dígito, devolvemos None
+        if len(cleaned) <= 1:
+            return None
+        return cleaned
 
     @staticmethod
     def validItemCode(code: str | None) -> str | None:
-        if code:
-            return code.strip().upper()
-        return None
+        if not code:
+            return None
+        cleaned = code.strip().upper()
+        # Si queda vacío o un solo carácter, devolvemos None
+        if len(cleaned) <= 1:
+            return None
+        return cleaned
 
     @staticmethod
-    def validDate(value):
-        if value and hasattr(value, 'strftime'):
-            return value.strftime('%Y-%m-%d')
-        return None
-    
+    def validDate(value) -> str | None:
+        # Asegurarnos de que tenga método strftime (por ejemplo un datetime.date)
+        if not value or not hasattr(value, 'strftime'):
+            return None
+        formatted = value.strftime('%Y-%m-%d')
+        # Aunque casi siempre tendrá varios caracteres,
+        # seguimos la misma regla por consistencia
+        if len(formatted) <= 1:
+            return None
+        return formatted
+
     @staticmethod
-    def validFloat(val):
+    def validFloat(val) -> float | None:
+        if val is None:
+            return None
+        s = str(val).strip()
+        # Si, tras limpiar, no queda nada o sólo un carácter,
+        # devolvemos None en lugar de intentar parsear
+        if len(s) <= 1:
+            return None
         try:
-            return float(str(val).strip())
+            return float(s)
         except (ValueError, TypeError):
-            return 0.0
+            return None
 
 
 # Funciones de transformación SQL
@@ -93,8 +119,6 @@ def sql_transform_title_case(column):
 
 def sql_transform_pass(column):
     return column
-
-
 
 def create_hybrid_property(cf_column: str, prop_name: str, transform_function, sql_transform_function=None):
     @hybrid_property

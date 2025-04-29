@@ -63,27 +63,27 @@ class SalesOrder(DocTypeHandler):
     def get_filters(self):
         filters = []
 
-        if self.customer_name and self.customer_name != ' ':
+        if self.customer_name:
             filters.append(["Sales Order", "customer", "=", self.customer_name])
-        if self.delivery_date and self.delivery_date != ' ':
+        if self.delivery_date:
             filters.append(["Sales Order", "delivery_date", "=", self.delivery_date])
-        if self.custom_expiry_date and self.custom_expiry_date != ' ':
+        if self.custom_expiry_date:
             filters.append(["Sales Order", "custom_expiry_date", "=", self.custom_expiry_date])
-        if self.custom_ffm_app_id and self.custom_ffm_app_id != ' ':
+        if self.custom_ffm_app_id:
             filters.append(["Sales Order", "custom_ffm_app_id", "=", self.custom_ffm_app_id])
-        if self.custom_subscriber_id and self.custom_subscriber_id != ' ':
+        if self.custom_subscriber_id:
             filters.append(["Sales Order", "custom_subscriber_id", "=", self.custom_subscriber_id])
-        if self.custom_app_review and self.custom_app_review != ' ':
+        if self.custom_app_review:
             filters.append(["Sales Order", "custom_app_review", "=", self.custom_app_review])
-        if self.custom_consent and self.custom_consent != ' ':
+        if self.custom_consent:
             filters.append(["Sales Order", "custom_consent", "=", self.custom_consent])
-        if self.custom_renew and self.custom_renew != ' ':
+        if self.custom_renew:
             filters.append(["Sales Order", "custom_renew", "=", self.custom_renew])
-        if self.transaction_date and self.transaction_date != ' ' or self.delivery_date or self.delivery_date != ' ':
+        if self.transaction_date or self.delivery_date:
             filters.append(["Sales Order", "transaction_date", "=", self.transaction_date if self.broker != 'Otro Broker' else self.delivery_date])
-        if self.item_name and self.item_name != ' ':
+        if self.item_name:
             filters.append(["Sales Order Item", "item_code", "=", self.item_name])
-        if self.rate and self.rate != ' ':
+        if self.rate:
             filters.append(["Sales Order Item", "rate", "=", float(self.rate) if self.rate else 0.0])
 
 

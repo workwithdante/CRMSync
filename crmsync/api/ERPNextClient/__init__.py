@@ -86,7 +86,7 @@ class ERPNextClient:
                 return data
             return None
         
-        if not name and filters:
+        def search_by_filters(base_url, filters):
             # Búsqueda resumida para obtener solo el primer resultado
             filter_url = base_url
             params_filters = {
@@ -101,7 +101,10 @@ class ERPNextClient:
                 print(f"🔍 No {doctype} found for filters.")
                 return None
 
-            name = filter_data["name"]
+            return filter_data["name"]
+        
+        if not name:
+            name = search_by_filters(base_url, filters)
 
         if name:
             url = f"{base_url}/{quote(name)}"
@@ -125,6 +128,20 @@ class ERPNextClient:
                 if body.get("exc_type") == "DoesNotExistError":
                     tqdm.write(f"🔍 {doctype} '{name}' not found (DoesNotExistError).")
                     return None
+                if body.get("exc_type") == "ValidationError" and doctype == "Contact":
+                    name = search_by_filters(
+                        base_url,
+                        filters,
+                    )
+
+                    if name:
+                        return {
+                            "data": [
+                                {
+                                    "name": name,
+                                },
+                            ],
+                        }
 
             # Ahora sí, si no es DoesNotExistError, lanza error si corresponde
             response.raise_for_status()

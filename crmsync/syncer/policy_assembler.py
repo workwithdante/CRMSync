@@ -35,6 +35,9 @@ class PolicyAssembler:
 
         # 2) Iterar todas las filas (órdenes)
         for _, row in rows.iterrows():
+
+            if not row.get("delivery_date"):
+                continue
             # 2.1) Address con caché
             addr_key = (
                 row.get(addr_map["street"]),
@@ -62,30 +65,30 @@ class PolicyAssembler:
                 dob = row.get(mapping["day_of_birth"])
                 contact_key = (fn, ln, dob)
 
-                relations_in_spanish = {
-                    "ABUELO(A)": "Grandparent",
-                    "HERMANO(A)": "Sibling",
-                    "HIJO(A)": "Child",
-                    "NIETO(A)": "Grandchild",
-                    "PADRE/MADRE": "Parent",
-                    "SOBRINO(A)": "Cousin",
-                    "SUEGRO(O)": "Parent-In-Law",
-                    "TIO(A)": "Uncle/Aunt",
-                    "HIJASTRO(A)": "Stepchild",
-                    "CUÑADO(A)": "Nibling",
-                    "OTRO": "Other",
-                    "YERNO/NUERA": "Nibling",
-                    "PRIMO(A)": "Cousin",
+                grouped_relations: dict[str, str] = {
+                    "ABUELO(A)":     "Grandparent",
+                    "HERMANO(A)":    "Brother or Sister (including half and step-siblings)",
+                    "HIJO(A)":       "Child (including adopted children)",
+                    "NIETO(A)":      "Grandchild",
+                    "PADRE/MADRE":   "Parent (including adoptive parents)",
+                    "SOBRINO(A)":    "Nephew or Niece",
+                    "SUEGRO(O)":     "Mother-in-law or Father-in-law",
+                    "TIO(A)":        "Uncle or Aunt",
+                    "HIJASTRO(A)":   "Stepchild",
+                    "CUÑADO(A)":     "Brother-in-law or Sister-in-law",
+                    "YERNO/NUERA":   "Son-in-law or Daughter-in-law",
+                    "PRIMO(A)":      "First cousin",
+                    "OTRO":          "Other Relative (including by marriage and adoption)",
                 }
-                
-                relationship = relations_in_spanish.get(row.get(mapping["relationship"]), mapping["relationship"])
+
+                relationship = grouped_relations.get(row.get(mapping["relationship"]), mapping["relationship"])
 
                 if mapping["relationship"] == "Owner":
                     relationship = "Owner"
                 elif mapping["relationship"] == "Spouse":
                     relationship = "Spouse"
                 else:
-                    relationship = relations_in_spanish.get(row.get(mapping["relationship"]), "Other")
+                    relationship = grouped_relations.get(row.get(mapping["relationship"]), "Other Relative (including by marriage and adoption)")
 
                 if contact_key in self._contact_cache:
                     contact = self._contact_cache[contact_key]  
