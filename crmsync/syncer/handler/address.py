@@ -60,4 +60,9 @@ class Address(DocTypeHandler):
         return data
 
     def _full_address(self):
-        return ", ".join(filter(None, [self.street, self.city, self.state, str(int(self.code))]))
+        return ", ".join(filter(None, [
+            self.street,
+            self.city,
+            self.state,
+            str(int(self.code)) if str(self.code).isdigit() else None
+        ]))

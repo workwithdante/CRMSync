@@ -27,7 +27,7 @@ class QueryService:
         result = uow.execute(text("SELECT VERSION();"))
         return result.fetchone()[0]
 
-    def fetch_records(self, uow, limit_contacts: int = 500) -> DataFrame:
+    def fetch_records(self, uow, offset_contacts: int = 650, limit_contacts: int = 500) -> DataFrame:
         # ----------- 0) JOIN definitions -----------
         joins = [
             (VTigerSalesOrder, VTigerSalesOrderCF.salesorderid == VTigerSalesOrder.salesorderid),
@@ -40,7 +40,7 @@ class QueryService:
         ]
 
         # ----------- 1) Get valid contact IDs in Python -----------
-        contact_query = (
+        subquery = (
             uow.query(VTigerSalesOrder.contactid)
             .join(VTigerSalesOrderCF, VTigerSalesOrderCF.salesorderid == VTigerSalesOrder.salesorderid)
             .join(VTigerCRMEntity, and_(
@@ -52,6 +52,12 @@ class QueryService:
             .filter(VTigerSalesOrderCF.cf_2067 != 'Otro Broker')
             .filter(VTigerSalesOrder.contactid.isnot(None))  # muy importante
             .distinct()
+            .subquery()
+        )
+
+        contact_query = (
+            uow.query(subquery.c.contactid)
+            .offset(offset_contacts)
             .limit(limit_contacts)
         )
 

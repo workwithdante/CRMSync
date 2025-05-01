@@ -62,6 +62,31 @@ class ERPNextClient:
         except requests.exceptions.RequestException as e:
             print(f"❌ Authentication failed: {e}")
             return False
+    
+    def search_by_filters(self, doctype, base_url, filters):
+            # Búsqueda resumida para obtener solo el primer resultado
+            filter_url = base_url
+            params_filters = {
+                "filters": json.dumps(filters),
+                "fields": json.dumps(["name"]),
+                "limit_page_length": 1
+            }
+            filter_response = self.session.get(filter_url, params=params_filters)
+            filter_data = self.extract_single_data(filter_response.json())
+
+            if not filter_data:
+                print(f"🔍 No {doctype} found for filters.")
+                return None
+
+            return filter_data["name"]
+
+    def extract_single_data(self, response_json):
+        data = response_json.get("data")
+        if isinstance(data, list):
+            return data[0] if data else None
+        elif isinstance(data, dict):
+            return data
+        return None
 
     def doQuery(self, doctype, name=None, filters=None, fields=None, include_childs=None):
         """
@@ -78,33 +103,8 @@ class ERPNextClient:
         params = {}
         params['fields'] = json.dumps(fields if fields else ["*"])
         
-        def extract_single_data(response_json):
-            data = response_json.get("data")
-            if isinstance(data, list):
-                return data[0] if data else None
-            elif isinstance(data, dict):
-                return data
-            return None
-        
-        def search_by_filters(base_url, filters):
-            # Búsqueda resumida para obtener solo el primer resultado
-            filter_url = base_url
-            params_filters = {
-                "filters": json.dumps(filters),
-                "fields": json.dumps(["name"]),
-                "limit_page_length": 1
-            }
-            filter_response = self.session.get(filter_url, params=params_filters)
-            filter_data = extract_single_data(filter_response.json())
-
-            if not filter_data:
-                print(f"🔍 No {doctype} found for filters.")
-                return None
-
-            return filter_data["name"]
-        
         if not name:
-            name = search_by_filters(base_url, filters)
+            name = self.search_by_filters(doctype, base_url, filters)
 
         if name:
             url = f"{base_url}/{quote(name)}"
@@ -128,24 +128,10 @@ class ERPNextClient:
                 if body.get("exc_type") == "DoesNotExistError":
                     tqdm.write(f"🔍 {doctype} '{name}' not found (DoesNotExistError).")
                     return None
-                if body.get("exc_type") == "ValidationError" and doctype == "Contact":
-                    name = search_by_filters(
-                        base_url,
-                        filters,
-                    )
-
-                    if name:
-                        return {
-                            "data": [
-                                {
-                                    "name": name,
-                                },
-                            ],
-                        }
 
             # Ahora sí, si no es DoesNotExistError, lanza error si corresponde
             response.raise_for_status()
-            return extract_single_data(response.json())
+            return self.extract_single_data(response.json())
 
         except requests.exceptions.HTTPError as e:
             print(f"❌ HTTP Error: {e}")
@@ -174,6 +160,20 @@ class ERPNextClient:
         url = f"{self.host_api}/api/resource/{doctype}"
         try:
             response = self.session.post(url, data=json.dumps(data))
+            if "application/json" in response.headers.get("Content-Type", ""):
+                body = response.json()
+                if body.get("exc_type") == "ValidationError" and doctype == "Contact":
+                    base_url = f"{self.host_api}/api/method/mabecenter.controllers.contact.get_contact_hide"
+                    response = self.session.post(base_url, json={"data": json.dumps(data)})
+                    name = response.json().get("message")
+
+                    if name:
+                        return {
+                            "data": {
+                                "name": name,
+                            },
+                        }
+                    
             response.raise_for_status()
             tqdm.write(f"✅ Created {doctype}: {response.json()['data']['name']}")
             return response.json()

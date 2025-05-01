@@ -47,7 +47,7 @@ class PolicyAssembler:
             )
 
             address = None
-            if addr_key != ('', '', '', ''):
+            if all(addr_key) and any(s.strip() for s in addr_key if isinstance(s, str)):
                 if addr_key in self._address_cache:
                     address = self._address_cache[addr_key]
                 else:

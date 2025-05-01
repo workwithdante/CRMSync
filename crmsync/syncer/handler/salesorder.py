@@ -53,7 +53,7 @@ class SalesOrder(DocTypeHandler):
         self.normalize_and_sync()
         
     def normalize_fields(self):
-        self.custom_consent = self.custom_consent if self.custom_consent != 'Email Send' else "Email Sent"
+        self.custom_consent = self.custom_consent if self.custom_consent not in ('Email Send', 'Email Resend') else "Email Sent"
 
         self.transaction_date = self.transaction_date if self.transaction_date != 'None' and self.transaction_date else self.delivery_date
 
