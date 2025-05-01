@@ -118,7 +118,7 @@ class DocTypeHandler(ABC):
             existing = existing if isinstance(existing, dict) else existing.get("data")
 
             comparator = DictComparator()
-            comparator.register("links", lambda n, e: comparator.compare_list_of_dicts(n, e, ["link_name", "link_doctype"]))
+            comparator.register("links", lambda n, e: comparator.compare_list_of_dicts(n, e, ["link_name", "link_doctype"], True if self.doctype == "Address" else False))
             comparator.register("email_ids", lambda n, e: comparator.compare_list_of_dicts(n, e, ["email_id", "is_primary"]))
             comparator.register("phone_nos", lambda n, e: comparator.compare_list_of_dicts(n, e, ["phone", "is_primary_phone", "is_primary_mobile_no"]))
             comparator.register("attributes", lambda n, e: comparator.compare_list_of_dicts(n, e, ["attribute", "attribute_value"]))

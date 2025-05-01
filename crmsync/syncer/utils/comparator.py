@@ -35,11 +35,13 @@ class DictComparator:
     def _is_number(self, value: Any) -> bool:
         return re.match(r'^-?\d+(?:\.\d+)?$', str(value)) is not None
 
+
     def compare_list_of_dicts(
         self,
         new_list: List[Dict[str, Any]],
         existing_list: List[Dict[str, Any]],
-        keys: List[str]
+        keys: List[str],
+        append: bool = False
     ) -> bool:
         if not isinstance(new_list, list) or not isinstance(existing_list, list):
             return True
@@ -53,33 +55,44 @@ class DictComparator:
         def clean_item(item: Dict[str, Any]) -> Dict[str, Any]:
             return {k: normalize(item.get(k)) for k in keys}
 
-        new_cleaned = [clean_item(i) for i in new_list]
+        # Paso 1: versiones “limpias”
+        new_cleaned      = [clean_item(i) for i in new_list]
         existing_cleaned = [clean_item(i) for i in existing_list]
 
-        new_ids = [tuple(i.values()) for i in new_cleaned]
-        existing_ids = [tuple(i.values()) for i in existing_cleaned]
+        # Paso 2: si append, fusionamos lo que falte en new_list
+        if append:
+            # 1) Set de tuplas ya existentes (usamos existing_cleaned)
+            seen = {tuple(d.values()) for d in existing_cleaned}
 
-        from collections import Counter
-        new_counts = Counter(new_ids)
-        existing_counts = Counter(existing_ids)
+            # 2) Snapshot de pares (cleaned, original) para iterar sin pisar new_list
+            pairs = list(zip(new_cleaned, existing_list))
 
-        # Mostrar diferencias campo por campo si hay nuevas entradas
+            # 3) Para cada par, añadimos el original si no lo habíamos visto
+            for cleaned_dict, orig_item in pairs:
+                tup = tuple(cleaned_dict.values())  # corresponde al orden de 'keys'
+                if tup not in seen:
+                    new_list.append(orig_item)       # mutamos new_list
+                    new_cleaned.append(cleaned_dict) # mantenemos los cleaned sync
+                    seen.add(tup)
+                    print(f"➕ Appended: {tup}")
+
+        # Paso 3: tu lógica de detección de diferencias
         for n_item in new_cleaned:
             if n_item not in existing_cleaned:
-                similar = next((e_item for e_item in existing_cleaned if e_item.get("contact") == n_item.get("contact")), None)
+                similar = next(
+                    (e for e in existing_cleaned if e.get("contact") == n_item.get("contact")),
+                    None
+                )
+                print(f"➕ To add: {tuple(n_item.values())} (x1)")
                 if similar:
                     diffs = {
                         k: (similar[k], n_item[k])
                         for k in keys
-                        if similar.get(k) != n_item.get(k)
+                        if similar.get(k) != n_item[k]
                     }
-                    print(f"➕ To add: {tuple(n_item.values())} (x1)")
                     for field, (old, new) in diffs.items():
                         print(f"   ↪ Campo '{field}': '{old}' → '{new}'")
-                    return True
-                else:
-                    print(f"➕ To add: {tuple(n_item.values())} (x1)")
-                    return True
+                return True
 
         for e_item in existing_cleaned:
             if e_item not in new_cleaned:
