@@ -33,7 +33,11 @@ class Customer(DocTypeHandler):
 
     def build_data(self):
         return {
-            "customer_name": self.full_name()
+            "customer_name": self.full_name(),
+            "customer_group": "Individual",
+            "territory": "United States",
+            "default_currency": "USD",
+            "default_price_list": "Standard Selling",
         }
 
     def full_name(self):

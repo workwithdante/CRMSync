@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+import re
 from typing import Optional
 from crmsync.syncer.handler.base import DocTypeHandler
 
@@ -28,7 +29,19 @@ class Address(DocTypeHandler):
 
     def __post_init__(self):
         self.doctype = "Address"
+        self.normalize_fields()
         self.normalize_and_sync()
+    
+    def normalize_fields(self):
+        RE_NON_LETTER = re.compile(r'[^A-Za-z0-9À-ÖØ-öø-ÿ]+')
+        self.street = RE_NON_LETTER.sub("", self.street)
+        self.pobox = RE_NON_LETTER.sub("", self.pobox)
+        self.city = RE_NON_LETTER.sub("", self.city)
+        self.state = RE_NON_LETTER.sub("", self.state)
+        self.code = RE_NON_LETTER.sub("", self.code)
+        self.complement = RE_NON_LETTER.sub("", self.complement) if self.complement else ""
+        self.country = "United States"
+
 
     def get_filters(self):
         return None

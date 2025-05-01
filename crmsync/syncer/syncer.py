@@ -1,7 +1,9 @@
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import math
 import os
 import json
 import random
+import threading
 from typing import Iterator
 import spacy
 from spacy.tokens import DocBin
@@ -23,31 +25,52 @@ class Syncer:
         self.config = SyncConfig()
         self.query_service = QueryService(self.config)
         self.unit_of_work = UnitOfWork(lambda: sessionmaker(bind=engine)())
-
+        self.max_workers = 1 #self.config.max_workers
+ 
     def sync(self):
         logger = setup_logging()
         try:
+            # 1) Fetch records una vez y agrupa
+            df = None
             with self.unit_of_work as uow:
                 version = self.query_service.validate_connection(uow)
-                logger.info(f"Connected to VTigerCRM (version {version})")
-
-                # 1) Fetch records
+                logger.info(f"Conectado a VTigerCRM (versión {version})")
                 df = self.query_service.fetch_records(uow)
 
-                # 2) Entrenar el modelo NER de SpaCy
-                #self._train_ner_model("model")
+            groups = [
+                (contact_id, group.copy())
+                for contact_id, group in df.groupby("contact_id")
+            ]
 
-                for contact_id, group in tqdm(df.groupby("contact_id"), desc="Procesando contactos"):
-                    PolicyAssembler(self.config, contact_id, group)
-                    # Si deseas procesar tickets también, descomenta:
-                    # df_issues = self.query_service.fetch_issues(uow, contact_id)
-                    # for ticket in df_issues.itertuples(index=False):
-                    #     pa.create_issue(ticket.title, ticket.status, ticket.description, ticket.solution)
+            # 2) Ejecuta en paralelo
+            with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
+                future_to_cid = {
+                    executor.submit(self._process_contact, cid, grp): cid
+                    for cid, grp in groups
+                }
+                for future in tqdm(as_completed(future_to_cid),
+                                   total=len(future_to_cid),
+                                   desc="Procesando contactos"):
+                    cid = future_to_cid[future]
+                    try:
+                        future.result()
+                    except Exception as e:
+                        logger.error(f"Fallo en contacto {cid}: {e}")
 
         except Exception as e:
             logger.error(f"Sync failed: {e}")
             return False
         return True
+
+    def _process_contact(self, contact_id, rows):
+        # 1) Obtén el nombre de hilo
+        thread_name = threading.current_thread().name
+
+        # 2) Imprime con tqdm.write
+        tqdm.write(f"[{thread_name}] ⏱ Emsablando customer {contact_id}")
+
+        # 3) Tu lógica
+        assembler = PolicyAssembler(self.config, contact_id, rows)
 
     def recursive_join(self, query, join_list):
         if not join_list:
