@@ -33,7 +33,7 @@ class Address(DocTypeHandler):
         self.normalize_and_sync()
     
     def normalize_fields(self):
-        RE_NON_LETTER = re.compile(r'[^A-Za-z0-9À-ÖØ-öø-ÿ]+')
+        RE_NON_LETTER = re.compile(r'[^A-Za-z0-9À-ÖØ-öø-ÿ ]+')
         self.street = RE_NON_LETTER.sub("", self.street)
         self.pobox = RE_NON_LETTER.sub("", self.pobox)
         self.city = RE_NON_LETTER.sub("", self.city)
