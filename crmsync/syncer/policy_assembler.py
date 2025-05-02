@@ -41,9 +41,10 @@ class PolicyAssembler:
             if bank := row.get(self.config.bank_account_mapping[0]["bank_account"]):
                 [chunk] = parser_bank.process_text(bank)
                 bank_name = chunk.get("matched")
-                bank_account = BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name, bank_account=bank_name)
+                bank_account = BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name, type="Bank", bank_name=bank_name)
             else:
-                bank_account = BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name)
+                card_type = row.get(self.config.bank_account_mapping[0]["card_type"])
+                bank_account = BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name, type="Credit Card" if card_type == "Crédito" else "Debid Card", bank_name=)
 
             if not row.get("delivery_date"):
                 continue
