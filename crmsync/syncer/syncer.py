@@ -7,6 +7,7 @@ import threading
 from typing import Iterator
 import spacy
 from spacy.tokens import DocBin
+from syncer.entry_parser_doc_simple import SimpleNameResolver
 from tqdm import tqdm
 
 from crmsync.config import SyncConfig
@@ -41,11 +42,33 @@ class Syncer:
                 (contact_id, group.copy())
                 for contact_id, group in df.groupby("contact_id")
             ]
+            
+            valid_names = [
+                "American Express Company",
+                "Discover Financial Services",
+                "Mastercard Incorporated",
+                "Visa Inc",
+                "FirstBank",
+                "Citibank",
+                "Citizens Bank",
+                "M&T Bank",
+                "Fifth Third Bank",
+                "TD Bank",
+                "Regions Bank",
+                "Truist Bank",
+                "PNC Bank",
+                "U.S. Bank",
+                "Bank of America",
+                "Wells Fargo Bank",
+                "Chase Bank",
+            ]
+
+            parser_bank = SimpleNameResolver(valid_names=valid_names)
 
             # 2) Ejecuta en paralelo
             with ThreadPoolExecutor(max_workers=self.max_workers) as executor:
                 future_to_cid = {
-                    executor.submit(self._process_contact, cid, grp): cid
+                    executor.submit(self._process_contact, cid, grp, parser_bank): cid
                     for cid, grp in groups
                 }
                 for future in tqdm(as_completed(future_to_cid),
@@ -62,7 +85,7 @@ class Syncer:
             return False
         return True
 
-    def _process_contact(self, contact_id, rows):
+    def _process_contact(self, contact_id, rows, parser_bank):
         # 1) Obtén el nombre de hilo
         thread_name = threading.current_thread().name
 
@@ -70,7 +93,7 @@ class Syncer:
         tqdm.write(f"[{thread_name}] ⏱ Emsablando customer {contact_id}")
 
         # 3) Tu lógica
-        assembler = PolicyAssembler(self.config, contact_id, rows)
+        assembler = PolicyAssembler(self.config, contact_id, rows, parser_bank)
 
     def recursive_join(self, query, join_list):
         if not join_list:

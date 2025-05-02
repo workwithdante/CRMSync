@@ -1,0 +1,12 @@
+[
+    {
+        "bank_account": "cf_1471",
+        "bank_account_no": "cf_1479",
+        "branch_code": "cf_1475",
+        "card_account": "cf_1481",
+        "card_number": "cf_1465",
+        "card_verification_code": "cf_1473",
+        "expiration_date": "cf_1473",
+        "card_type": "cf_2157"
+    }
+]

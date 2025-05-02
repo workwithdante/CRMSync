@@ -2,16 +2,13 @@ from database.models.vtigercrm_troubletickets import VTigerTroubleTickets
 from database.models.vtigercrm_ticketcf import VTigerTicketCF
 from crmsync.config import SyncConfig
 
-from datetime import datetime, date
-
-from sqlalchemy import func, select, text
+from sqlalchemy import func, text
 
 from sqlalchemy import and_
 from sqlalchemy.ext.hybrid import hybrid_property
 
 from pandas import DataFrame
 import pandas as pd
-import polars as pl
 
 from crmsync.database.models.vtigercrm_contactcf import VTigerContactsCF
 from crmsync.database.models.vtigercrm_contactdetails import VTigerContactDetails
@@ -27,7 +24,7 @@ class QueryService:
         result = uow.execute(text("SELECT VERSION();"))
         return result.fetchone()[0]
 
-    def fetch_records(self, uow, offset_contacts: int = 2000, limit_contacts: int = 500) -> DataFrame:
+    def fetch_records(self, uow, offset_contacts: int = 2560, limit_contacts: int = 2000) -> DataFrame:
         # ----------- 0) JOIN definitions -----------
         joins = [
             (VTigerSalesOrder, VTigerSalesOrderCF.salesorderid == VTigerSalesOrder.salesorderid),

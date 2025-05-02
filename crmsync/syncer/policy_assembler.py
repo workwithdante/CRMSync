@@ -1,5 +1,6 @@
 import logging
 import gc
+from syncer.handler.bank_account import BankAccount
 from tqdm import tqdm
 from typing import Dict, Tuple
 from polars import DataFrame
@@ -17,7 +18,7 @@ from crmsync.config import SyncConfig
 logging.basicConfig(level=logging.INFO)
 
 class PolicyAssembler:
-    def __init__(self, config: SyncConfig, contact_id: str, rows: DataFrame):
+    def __init__(self, config: SyncConfig, contact_id: str, rows: DataFrame, parser_bank: SimpleNameResolver):
         self.config = config
         self.contact_id = contact_id
         self.rows = rows
@@ -35,6 +36,14 @@ class PolicyAssembler:
 
         # 2) Iterar todas las filas (órdenes)
         for _, row in rows.iterrows():
+            bank_account = None
+
+            if bank := row.get(self.config.bank_account_mapping[0]["bank_account"]):
+                [chunk] = parser_bank.process_text(bank)
+                bank_name = chunk.get("matched")
+                bank_account = BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name, bank_account=bank_name)
+            else:
+                bank_account = BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name)
 
             if not row.get("delivery_date"):
                 continue

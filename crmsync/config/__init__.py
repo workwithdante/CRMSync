@@ -31,6 +31,7 @@ class SyncConfig:
         self.address_mapping = self._load_mapping('address')
         self.contact_mapping = self._load_mapping('contact')
         self.customer_mapping = self._load_mapping('customer')
+        self.bank_account_mapping = self._load_mapping('bank_account')
         self.item_mapping = self._load_mapping('item')
         
     def _load_mapping(self, filename: str) -> Dict[str, Any]:
