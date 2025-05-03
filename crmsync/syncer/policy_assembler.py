@@ -36,12 +36,13 @@ class PolicyAssembler:
 
         # 2) Iterar todas las filas (órdenes)
         for _, row in rows.iterrows():
-            bank_account = None
+            account_type = None
+            bank_name = None
 
             if bank := row.get(self.config.bank_account_mapping[0]["bank_account"]):
                 [chunk] = parser_bank.process_text(bank)
                 bank_name = chunk.get("matched")
-                bank_account = BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name, account_type="Bank", bank_name=bank_name)
+                account_type = "Bank"
             else:
                 card_type = row.get(self.config.bank_account_mapping[0]["card_type"])
                 card_account = row.get(self.config.bank_account_mapping[0]["card_account"])
@@ -51,8 +52,10 @@ class PolicyAssembler:
                     "AMERICAN EXPRESS": "American Express Company",
                     "DISCOVERY": "Discover Financial Services",
                 }
+                bank_name = CARDS.get(card_account)
+                account_type = "Credit Card" if card_type == "Crédito" else "Debit Card"
 
-                bank_account = BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name, account_type="Credit Card" if card_type == "Crédito" else "Debit Card", bank_name=CARDS.get(card_account))
+            BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name, account_type=account_type, bank_name=bank_name)
 
             if not row.get("delivery_date"):
                 continue
