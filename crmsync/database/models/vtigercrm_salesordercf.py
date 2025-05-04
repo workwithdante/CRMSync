@@ -1,5 +1,7 @@
 import os
 import re
+import os
+import re
 from sqlalchemy import Float, MetaData, func
 from sqlalchemy.ext.hybrid import hybrid_property
 
@@ -11,10 +13,16 @@ metadata.reflect(bind=get_engine(), only=['vtiger_salesordercf'])
 
 
 class VTigerSalesOrderCF(Base):
+    """
+    Modelo para la tabla vtiger_salesordercf.
+    """
     __table__ = metadata.tables['vtiger_salesordercf']
 
     @staticmethod
     def validText(text: str | None) -> str | None:
+        """
+        Valida un texto.
+        """
         if text is None:
             return None
 
@@ -26,6 +34,9 @@ class VTigerSalesOrderCF(Base):
 
     @staticmethod
     def validSSN(ssn: str | None) -> str | None:
+        """
+        Valida un SSN.
+        """
         if not ssn:
             return None
         cleaned = re.sub(r'\D', '', ssn)
@@ -36,6 +47,9 @@ class VTigerSalesOrderCF(Base):
 
     @staticmethod
     def validItemCode(code: str | None) -> str | None:
+        """
+        Valida un código de artículo.
+        """
         if not code:
             return None
         cleaned = code.strip().upper()
@@ -46,6 +60,9 @@ class VTigerSalesOrderCF(Base):
 
     @staticmethod
     def validDate(value) -> str | None:
+        """
+        Valida una fecha.
+        """
         # Asegurarnos de que tenga método strftime (por ejemplo un datetime.date)
         if not value or not hasattr(value, 'strftime'):
             return None
@@ -58,6 +75,9 @@ class VTigerSalesOrderCF(Base):
 
     @staticmethod
     def validFloat(val) -> float | None:
+        """
+        Valida un número de punto flotante.
+        """
         if val is None:
             return None
         s = str(val).strip()
@@ -74,6 +94,9 @@ class VTigerSalesOrderCF(Base):
 # Funciones de transformación SQL
 
 def sql_transform_text(column):
+    """
+    Transforma un texto en SQL.
+    """
     # 1) Trim y colapsar múltiples espacios en uno
     no_double_spaces = func.regexp_replace(
         func.trim(column),
@@ -88,15 +111,27 @@ def sql_transform_text(column):
     return func.concat(first_letter, rest)
 
 def sql_transform_ssn(column):
+    """
+    Transforma un SSN en SQL.
+    """
     return func.regexp_replace(column, '[^0-9]', '')
 
 def sql_transform_date(column):
+    """
+    Transforma una fecha en SQL.
+    """
     return func.date_format(column, '%Y-%m-%d')
 
 def sql_transform_float(column):
+    """
+    Transforma un número de punto flotante en SQL.
+    """
     return func.cast(column, Float)
 
 def sql_transform_title_case(column):
+    """
+    Transforma un texto a formato Title Case en SQL.
+    """
     # Reemplaza "_" por " "
     base = func.replace(column, '_', ' ')
 
@@ -118,9 +153,15 @@ def sql_transform_title_case(column):
     )
 
 def sql_transform_pass(column):
+    """
+    Transforma una contraseña en SQL.
+    """
     return column
 
 def create_hybrid_property(cf_column: str, prop_name: str, transform_function, sql_transform_function=None):
+    """
+    Crea una propiedad híbrida.
+    """
     @hybrid_property
     def prop(self):
         return transform_function(getattr(self, cf_column))

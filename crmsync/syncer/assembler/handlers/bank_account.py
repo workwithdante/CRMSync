@@ -1,11 +1,15 @@
 from dataclasses import dataclass, field
 import re
 from typing import Optional
-from crmsync.syncer.handler.base import DocTypeHandler
-from datetime import datetime
+from syncer.assembler.handlers.base import DocTypeHandler
 
 @dataclass
 class BankAccount(DocTypeHandler):
+    """
+    Handler para la cuenta bancaria.
+
+    Esta clase se encarga de manejar la lógica para la cuenta bancaria.
+    """
     customer_name: str
     bank_name: Optional[str] = None
     bank_account_no: Optional[str] = None
@@ -19,6 +23,16 @@ class BankAccount(DocTypeHandler):
     
     @classmethod
     def from_row(cls, row, mapping, customer_name, account_type, bank_name):
+        """
+        Crea una instancia de la clase desde una fila de datos.
+
+        Args:
+            row (dict): Fila de datos.
+            mapping (dict): Mapeo de campos.
+            customer_name (str): Nombre del cliente.
+            account_type (str): Tipo de cuenta.
+            bank_name (str): Nombre del banco.
+        """
         return cls(
             customer_name=customer_name,
             bank_name=bank_name,
@@ -31,11 +45,17 @@ class BankAccount(DocTypeHandler):
         )
 
     def __post_init__(self):
+        """
+        Método de inicialización posterior.
+        """
         self.doctype = "Bank Account"
         self.normalize_fields()
         self.normalize_and_sync()
     
     def normalize_fields(self):
+        """
+        Normaliza los campos.
+        """
         RE_NON_LETTER = re.compile(r'\D+')
         self.bank_account_no = RE_NON_LETTER.sub("", self.bank_account_no)
         self.branch_code = RE_NON_LETTER.sub("", self.branch_code)
@@ -49,18 +69,30 @@ class BankAccount(DocTypeHandler):
             self.card_expiration_date = f"20{year}-{month}-01"
                 
     def get_filters(self):
+        """
+        Obtiene los filtros para buscar la cuenta bancaria.
+        """
         return None
 
     def get_filters_child(self):
+        """
+        Obtiene los filtros para buscar los hijos de la cuenta bancaria.
+        """
         return None
     
     def get_existing_name(self):
+        """
+        Obtiene el nombre existente de la cuenta bancaria.
+        """
         if self.account_type == "Bank":
             return f"{self.bank_account_no[:4]} - {self.bank_name.split(' ')[0]} - {self.customer_name}"
         else:
             return f"{self.card_number[:4]} - {self.bank_name.split(' ')[0]} - {self.customer_name}"
 
     def build_data(self):
+        """
+        Construye los datos para la cuenta bancaria.
+        """
         data = {
             "account_name": self.customer_name,
             "bank": self.bank_name,

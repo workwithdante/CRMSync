@@ -2,11 +2,17 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import List
 
-from syncer.handler.contact import Contact
-from crmsync.syncer.handler.base import DocTypeHandler
+from syncer.assembler.handlers.base import DocTypeHandler
+from syncer.assembler.handlers.contact import Contact
+
 
 @dataclass
 class SalesOrder(DocTypeHandler):
+    """
+    Handler para la orden de venta.
+
+    Esta clase se encarga de manejar la lógica para la orden de venta.
+    """
     contacts: List[Contact]
     customer_name: str
     item_name: str
@@ -27,6 +33,16 @@ class SalesOrder(DocTypeHandler):
     
     @classmethod
     def from_row(cls, row, contacts: List[Contact], customer_name, item_name, address_name):
+        """
+        Crea una instancia de la clase desde una fila de datos.
+
+        Args:
+            row (dict): Fila de datos.
+            contacts (List[Contact]): Lista de contactos.
+            customer_name (str): Nombre del cliente.
+            item_name (str): Nombre del artículo.
+            address_name (str): Nombre de la dirección.
+        """
         # Campos que quieres mapear directamente desde el row
         direct_fields = [
             "transaction_date", "delivery_date", "custom_expiry_date",
@@ -48,11 +64,17 @@ class SalesOrder(DocTypeHandler):
         )
 
     def __post_init__(self):
+        """
+        Método de inicialización posterior.
+        """
         self.doctype = "Sales Order"
         self.normalize_fields()
         self.normalize_and_sync()
         
     def normalize_fields(self):
+        """
+        Normaliza los campos.
+        """
         self.custom_consent = self.custom_consent if self.custom_consent not in ('Email Send', 'Email Resend') else "Email Sent"
 
         self.transaction_date = self.transaction_date if self.transaction_date != 'None' and self.transaction_date else self.delivery_date
@@ -61,6 +83,9 @@ class SalesOrder(DocTypeHandler):
             self.transaction_date = self.delivery_date
 
     def get_filters(self):
+        """
+        Obtiene los filtros para buscar la orden de venta.
+        """
         filters = []
 
         if self.customer_name:
@@ -90,6 +115,9 @@ class SalesOrder(DocTypeHandler):
         return filters
 
     def get_filters_child(self):
+        """
+        Obtiene los filtros para buscar los hijos de la orden de venta.
+        """
         return [
             {
                 "childtable": "custom_dependents",
@@ -102,9 +130,15 @@ class SalesOrder(DocTypeHandler):
 
 
     def get_existing_name(self):
+        """
+        Obtiene el nombre existente de la orden de venta.
+        """
         return None
 
     def build_data(self):
+        """
+        Construye los datos para la orden de venta.
+        """
         data =  {
             "customer": self.customer_name,
             "company": 'Sierra Group',

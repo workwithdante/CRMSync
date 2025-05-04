@@ -5,10 +5,22 @@ from sqlalchemy import create_engine
 from crmsync.config import SyncConfig
 from crmsync.config.logging import setup_logging
 
+# Import Frappe framework for configuration access
+# Import SQLAlchemy engine creation function
+from sqlalchemy import create_engine
+
+from crmsync.config import SyncConfig
+from crmsync.config.logging import setup_logging
+
 conf = SyncConfig()
 engine = None
 
 def get_engine():
+    """
+    Obtiene el motor de SQLAlchemy.
+
+    Crea y devuelve un motor de SQLAlchemy basado en la configuración.
+    """
     global engine
     if engine:
         return engine

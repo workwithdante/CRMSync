@@ -8,4 +8,7 @@ metadata.reflect(bind=get_engine(), only=['vtiger_salesorder'])
 
 
 class VTigerSalesOrder(Base):
+    """
+    Modelo para la tabla vtiger_salesorder.
+    """
     __table__ = metadata.tables['vtiger_salesorder']

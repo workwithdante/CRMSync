@@ -8,4 +8,7 @@ metadata.reflect(bind=get_engine(), only=['vtiger_contactdetails'])
 
 
 class VTigerContactDetails(Base):
+    """
+    Modelo para la tabla vtiger_contactdetails.
+    """
     __table__ = metadata.tables['vtiger_contactdetails']

@@ -1,10 +1,16 @@
 from dataclasses import dataclass, field
 import re
 from typing import Optional
-from crmsync.syncer.handler.base import DocTypeHandler
+
+from syncer.assembler.handlers.base import DocTypeHandler
 
 @dataclass
 class Address(DocTypeHandler):
+    """
+    Handler para la dirección.
+
+    Esta clase se encarga de manejar la lógica para la dirección.
+    """
     customer_name: str
     street: str
     pobox: str
@@ -16,6 +22,14 @@ class Address(DocTypeHandler):
     
     @classmethod
     def from_row(cls, row, mapping, customer_name):
+        """
+        Crea una instancia de la clase desde una fila de datos.
+
+        Args:
+            row (dict): Fila de datos.
+            mapping (dict): Mapeo de campos.
+            customer_name (str): Nombre del cliente.
+        """
         return cls(
             customer_name=customer_name,
             street=row.get(mapping["street"]),
@@ -28,11 +42,17 @@ class Address(DocTypeHandler):
         )
 
     def __post_init__(self):
+        """
+        Método de inicialización posterior.
+        """
         self.doctype = "Address"
         self.normalize_fields()
         self.normalize_and_sync()
     
     def normalize_fields(self):
+        """
+        Normaliza los campos.
+        """
         RE_NON_LETTER = re.compile(r'[^A-Za-z0-9À-ÖØ-öø-ÿ ]+')
         self.street = RE_NON_LETTER.sub("", self.street)
         self.pobox = RE_NON_LETTER.sub("", self.pobox)
@@ -44,16 +64,28 @@ class Address(DocTypeHandler):
 
 
     def get_filters(self):
+        """
+        Obtiene los filtros para buscar la dirección.
+        """
         return None
 
     def get_filters_child(self):
+        """
+        Obtiene los filtros para buscar los hijos de la dirección.
+        """
         return None
     
     def get_existing_name(self):
+        """
+        Obtiene el nombre existente de la dirección.
+        """
         fulladdress = self._full_address()
         return f"{fulladdress}-Shipping"
 
     def build_data(self):
+        """
+        Construye los datos para la dirección.
+        """
         fulladdress = self._full_address()
         data = {
             "address_title": fulladdress,
@@ -73,6 +105,9 @@ class Address(DocTypeHandler):
         return data
 
     def _full_address(self):
+        """
+        Obtiene la dirección completa.
+        """
         return ", ".join(filter(None, [
             self.street,
             self.city,

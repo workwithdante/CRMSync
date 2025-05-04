@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import logging
+from typing import Optional
+
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from typing import Optional
 
 from tqdm import tqdm
@@ -10,38 +13,72 @@ from crmsync.syncer.utils.comparator import DictComparator
 
 @dataclass(kw_only=True)
 class DocTypeHandler(ABC):
+    """
+    Clase base para los handlers de DocType.
+
+    Esta clase define la estructura base para los handlers de DocType,
+    que se encargan de la lógica de mapeo, normalización y sincronización
+    de los datos.
+    """
     name: Optional[str] = None
     doctype: Optional[str] = None
     
     @classmethod
     @abstractmethod
     def from_row(cls, row, mapping: dict):
+        """
+        Crea una instancia de la clase desde una fila de datos.
+
+        Args:
+            row (dict): Fila de datos.
+            mapping (dict): Mapeo de campos.
+        """
         pass
 
     @abstractmethod
     def get_filters(self) -> list:
-        """Filtros para buscar si el documento ya existe."""
+        """
+        Obtiene los filtros para buscar si el documento ya existe.
+        """
         pass
 
     @abstractmethod
     def get_filters_child(self) -> list:
-        """Filtros para buscar si el documento ya existe en los hijos."""
+        """
+        Obtiene los filtros para buscar si el documento ya existe en los hijos.
+        """
         pass
 
     @abstractmethod
     def get_existing_name(self) -> str:
-        """Nombre estimado del documento (para uso en la búsqueda)."""
+        """
+        Obtiene el nombre estimado del documento (para uso en la búsqueda).
+        """
         pass
 
     @abstractmethod
     def build_data(self) -> dict:
-        """Estructura de datos nueva a crear o comparar."""
+        """
+        Construye la estructura de datos nueva a crear o comparar.
+        """
         pass
 
     def extract_name(self, result: dict):
+        """
+        Extrae el nombre del resultado.
+
+        Args:
+            result (dict): Resultado de la API.
+        """
         return result.get("name")
 
     def normalize_and_sync(self):
+        """
+        Normaliza y sincroniza los datos.
+
+        Este método se encarga de normalizar los datos y sincronizarlos
+        con la API de ERPNext.
+        """
         from api import client
 
         filters = self.get_filters()

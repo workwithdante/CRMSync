@@ -4,6 +4,12 @@ from rich.logging import RichHandler
 
 
 def setup_logging():
+    """
+    Configura el sistema de logging.
+
+    Inicializa y configura el logger para la aplicación. Utiliza RichHandler
+    para una salida formateada en la consola.
+    """
     logger = logging.getLogger("company_sync")
     logger.setLevel(logging.INFO)
 

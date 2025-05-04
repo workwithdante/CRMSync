@@ -17,14 +17,37 @@ from crmsync.database.models.vtigercrm_salesorder import VTigerSalesOrder
 from crmsync.database.models.vtigercrm_salesordercf import VTigerSalesOrderCF
 
 class QueryService:
+    """
+    Servicio de consultas a la base de datos.
+    """
     def __init__(self, config: SyncConfig):
+        """
+        Inicializa una nueva instancia de QueryService.
+
+        Args:
+            config (SyncConfig): Configuración de sincronización.
+        """
         self.config = config
         
     def validate_connection(self, uow):
+        """
+        Valida la conexión a la base de datos.
+        """
         result = uow.execute(text("SELECT VERSION();"))
         return result.fetchone()[0]
 
     def fetch_records(self, uow, offset_contacts: int = 1, limit_contacts: int = 1) -> DataFrame:
+        """
+        Obtiene los registros de la base de datos.
+
+        Args:
+            uow: Unidad de trabajo.
+            offset_contacts (int): Offset de los contactos.
+            limit_contacts (int): Límite de los contactos.
+
+        Returns:
+            DataFrame: DataFrame con los registros.
+        """
         # ----------- 0) JOIN definitions -----------
         joins = [
             (VTigerSalesOrder, VTigerSalesOrderCF.salesorderid == VTigerSalesOrder.salesorderid),
@@ -110,9 +133,12 @@ class QueryService:
         """
         Función recursiva que añade JOINs a la consulta.
 
-        :param query: Consulta base.
-        :param join_list: Lista de tuplas (modelo, condición de join).
-        :return: Consulta con los JOINs aplicados.
+        Args:
+            query: Consulta base.
+            join_list: Lista de tuplas (modelo, condición de join).
+
+        Returns:
+            Consulta con los JOINs aplicados.
         """
         if not join_list:
             return query
@@ -122,8 +148,14 @@ class QueryService:
     
     def fetch_issues(self, uow, contact_id) -> DataFrame:
         """
-        Fetch all trouble tickets (issues) for a given contact_id.
-        Returns DataFrame with ticket_id, status, title, created_time, description, solution.
+        Obtiene todos los tickets de problemas (issues) para un contact_id dado.
+
+        Args:
+            uow: Unidad de trabajo.
+            contact_id: ID del contacto.
+
+        Returns:
+            DataFrame: DataFrame con ticket_id, status, title, created_time, description, solution.
         """
         # Build query directly from troubletickets and crmentity
         q = (
@@ -157,4 +189,7 @@ class QueryService:
         return df
 
     def clean_for_polars(self, df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Limpia el DataFrame para usar con Polars.
+        """
         return df.astype(str)

@@ -81,8 +81,10 @@ doc = [
     "mkdocs-material",
     "mkdocstrings",
     "mkdocs-material-extension",
-    "mkdocs-autorefs"
-    ]
+    "mkdocs-autorefs",
+    "jinja2"
+    "pygments"
+]
 
 [tool.black]
 line-length = 120

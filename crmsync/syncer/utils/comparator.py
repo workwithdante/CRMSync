@@ -3,14 +3,38 @@ from typing import Any, Dict, List
 from collections import Counter
 
 class DictComparator:
+    """
+    Comparador de diccionarios.
+
+    Esta clase se encarga de comparar diccionarios y detectar las diferencias.
+    """
     def __init__(self):
+        """
+        Inicializa el comparador.
+        """
         self.comparators = {}
 
     def register(self, field: str, fn):
-        """Registrar una función de comparación especial para un campo."""
+        """
+        Registra una función de comparación especial para un campo.
+
+        Args:
+            field (str): Nombre del campo.
+            fn: Función de comparación.
+        """
         self.comparators[field] = fn
 
     def compare_dicts(self, new_data: Dict, existing_data: Dict) -> Dict:
+        """
+        Compara dos diccionarios y devuelve las diferencias.
+
+        Args:
+            new_data (Dict): Diccionario nuevo.
+            existing_data (Dict): Diccionario existente.
+
+        Returns:
+            Dict: Diccionario con las diferencias.
+        """
         changes = {
             k: v for k, v in new_data.items()
             if existing_data.get(k) != v
@@ -28,11 +52,29 @@ class DictComparator:
         return normalized_changes
 
     def _normalize_value(self, value: Any):
+        """
+        Normaliza un valor para la comparación.
+
+        Args:
+            value (Any): Valor a normalizar.
+
+        Returns:
+            Any: Valor normalizado.
+        """
         if self._is_number(value):
             return float(value)
         return str(value).strip()
 
     def _is_number(self, value: Any) -> bool:
+        """
+        Verifica si un valor es un número.
+
+        Args:
+            value (Any): Valor a verificar.
+
+        Returns:
+            bool: True si el valor es un número, False en caso contrario.
+        """
         return re.match(r'^-?\d+(?:\.\d+)?$', str(value)) is not None
 
 
@@ -43,6 +85,18 @@ class DictComparator:
         keys: List[str],
         append: bool = False
     ) -> bool:
+        """
+        Compara dos listas de diccionarios y devuelve True si hay diferencias.
+
+        Args:
+            new_list (List[Dict[str, Any]]): Lista nueva.
+            existing_list (List[Dict[str, Any]]): Lista existente.
+            keys (List[str]): Lista de claves a comparar.
+            append (bool): Indica si se deben agregar los elementos faltantes de la lista nueva a la existente.
+
+        Returns:
+            bool: True si hay diferencias, False en caso contrario.
+        """
         if not isinstance(new_list, list) or not isinstance(existing_list, list):
             return True
 
@@ -102,6 +156,17 @@ class DictComparator:
         return False
   
     def compare_items_with_names(self, new_items, existing_items, match_by="item_code"):
+        """
+        Compara dos listas de items y devuelve True si hay diferencias.
+
+        Args:
+            new_items (List[Dict[str, Any]]): Lista nueva.
+            existing_items (List[Dict[str, Any]]): Lista existente.
+            match_by (str): Campo a usar para la comparación.
+
+        Returns:
+            bool: True si hay diferencias, False en caso contrario.
+        """
         if not isinstance(new_items, list) or not isinstance(existing_items, list):
             return True
 

@@ -2,7 +2,7 @@ site_name: CRMSync
 site_url: https://mabecenter-it.github.io/crmsync
 repo_url: https://github.com/mabecenter-it/crmsync
 repo_name: mabecenter-it/crmsync
-#strict: true
+
 nav:
   - Home: index.md
   - Installation: installation.md
@@ -10,10 +10,50 @@ nav:
   - Modules: api.md
   - Contributing: contributing.md
   - Changelog: changelog.md
+  - Syncer:
+      - syncer/syncer.py
+      - syncer/assembler/policy_assembler.py
+      - syncer/assembler/core/pipeline.py
+      - syncer/assembler/core/step.py
+      - syncer/assembler/factories/base.py
+      - syncer/assembler/factories/address.py
+      - syncer/assembler/factories/bank_account.py
+      - syncer/assembler/factories/contact.py
+      - syncer/assembler/factories/customer.py
+      - syncer/assembler/factories/item.py
+      - syncer/assembler/factories/salesorder.py
+      - syncer/assembler/handlers/address.py
+      - syncer/assembler/handlers/bank_account.py
+      - syncer/assembler/handlers/base.py
+      - syncer/assembler/handlers/contact.py
+      - syncer/assembler/handlers/customer.py
+      - syncer/assembler/handlers/item.py
+      - syncer/assembler/handlers/salesorder.py
+      - syncer/assembler/linkers/address.py
+      - syncer/assembler/linkers/base.py
+      - syncer/assembler/linkers/contact.py
+      - syncer/assembler/linkers/document.py
+      - syncer/assembler/resolvers/simple_name.py
+      - syncer/utils/comparator.py
+      - syncer/utils/entry_parser_doc_simple.py
+      - syncer/utils/entry_parser_doc.py
+      - syncer/utils/entry_parser_issue.py
+  - Database:
+      - database/base.py
+      - database/engine.py
+      - database/unit_of_work.py
+      - database/models/vtigercrm_contactcf.py
+      - database/models/vtigercrm_contactdetails.py
+      - database/models/vtigercrm_crmentity.py
+      - database/models/vtigercrm_salesorder.py
+      - database/models/vtigercrm_salesordercf.py
+      - database/models/vtigercrm_ticketcf.py
+      - database/models/vtigercrm_troubletickets.py
+      - database/services/query.py
+
 theme:
   name: material
   language: en
-  #logo: assets/logo.png
   palette:
     scheme: preference
     primary: indigo
@@ -22,10 +62,11 @@ theme:
     - navigation.indexes
     - navigation.instant
     - navigation.tabs.sticky
+
 markdown_extensions:
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - pymdownx.critic
   - pymdownx.caret
   - pymdownx.mark
@@ -36,6 +77,8 @@ markdown_extensions:
       generic: true
   - pymdownx.highlight:
       linenums: false
+      use_pygments: false      # <— desactiva Pygments para evitar wrap() errors
+      inline: false
   - pymdownx.superfences
   - pymdownx.inlinehilite
   - pymdownx.details
@@ -45,6 +88,7 @@ markdown_extensions:
       permalink: true
       slugify: !!python/name:pymdownx.slugs.uslugify
   - meta
+
 plugins:
   - include-markdown
   - search:
@@ -52,24 +96,18 @@ plugins:
   - mkdocstrings:
       watch:
         - crmsync
+      handlers:
+        python:
+          rendering:
+            highlight_code: false  # <— desactiva inline highlight
+
 extra:
   social:
     - icon: fontawesome/brands/twitter
-      # replace with your own tweet link below
-      link: https://github.com/waynerv/cookiecutter-pypackage
-      name: Tweet
-    - icon: fontawesome/brands/facebook
-      # replace with your own facebook link below
-      link: https://github.com/waynerv/cookiecutter-pypackage
-      name: Facebook
+      link: https://twitter.com/tu_usuario
+      name: Twitter
     - icon: fontawesome/brands/github
       link: https://github.com/mabecenter-it/crmsync
-      name: Github
+      name: GitHub
     - icon: material/email
       link: "mailto:it@mabecenter.org"
-  # to enable disqus, uncomment the following and put your disqus id below
-  # disqus: disqus_id
-# uncomment the following and put your google tracking id below to enable GA
-#google_analytics:
-  #- UA-xxx
-  #- auto
