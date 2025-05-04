@@ -56,9 +56,9 @@ class BankAccount(DocTypeHandler):
     
     def get_existing_name(self):
         if self.account_type == "Bank":
-            return f"{self.bank_account_no[:4]} - {self.bank_name} - {self.customer_name}"
+            return f"{self.bank_account_no[:4]} - {self.bank_name.split(' ')[0]} - {self.customer_name}"
         else:
-            return f"{self.card_number[:4]} - {self.bank_name} - {self.customer_name}"
+            return f"{self.card_number[:4]} - {self.bank_name.split(' ')[0]} - {self.customer_name}"
 
     def build_data(self):
         data = {

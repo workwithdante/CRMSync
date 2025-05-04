@@ -25,6 +25,7 @@ class PolicyAssembler:
 
         self._contact_cache: Dict[Tuple[str, str, str], Contact] = {}
         self._address_cache: Dict[Tuple[str, str, str, str], Address] = {}
+        self._account_cache: Dict[Tuple[str, str, str], BankAccount] = {}
 
         # 1) Crear el customer UNA VEZ (la primera fila)
         first_row = rows.iloc[0]     
@@ -38,24 +39,8 @@ class PolicyAssembler:
         for _, row in rows.iterrows():
             account_type = None
             bank_name = None
-
-            if bank := row.get(self.config.bank_account_mapping[0]["bank_account"]):
-                [chunk] = parser_bank.process_text(bank)
-                bank_name = chunk.get("matched")
-                account_type = "Bank"
-            else:
-                card_type = row.get(self.config.bank_account_mapping[0]["card_type"])
-                card_account = row.get(self.config.bank_account_mapping[0]["card_account"])
-                CARDS = {
-                    "VISA": "Visa Inc",
-                    "MASTERCARD": "Mastercard Incorporated",
-                    "AMERICAN EXPRESS": "American Express Company",
-                    "DISCOVERY": "Discover Financial Services",
-                }
-                bank_name = CARDS.get(card_account)
-                account_type = "Credit Card" if card_type == "Crédito" else "Debit Card"
-
-            BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name, account_type=account_type, bank_name=bank_name)
+            account_number = None
+            owner = row.get(self.config.bank_account_mapping[0]["owner"])
 
             if not row.get("delivery_date"):
                 continue
@@ -132,7 +117,7 @@ class PolicyAssembler:
 
             parser = None
 
-            if documents or not contacts:
+            if documents or not contacts or owner:
                 valid_names = [c.name.split("-")[0] for c in self._contact_cache.values()]
                 parser = SimpleNameResolver(valid_names=valid_names if valid_names else [self.customer.name])
 
@@ -153,8 +138,71 @@ class PolicyAssembler:
                 contact.relationship = "Owner"
                 contacts.append(contact)
 
+            if bank := row.get(self.config.bank_account_mapping[0]["bank_account"]) and len(row.get(self.config.bank_account_mapping[0]["bank_account_no"])) > 0:
+                [chunk] = parser_bank.process_text(bank)
+                bank_name = chunk.get("matched")
+                account_type = "Bank"
+                account_number = row.get(self.config.bank_account_mapping[0]["bank_account_no"])[-4:]
+            else:
+                card_type = row.get(self.config.bank_account_mapping[0]["card_type"])
+                card_account = row.get(self.config.bank_account_mapping[0]["card_account"])
+                CARDS = {
+                    "VISA": "Visa Inc",
+                    "MASTERCARD": "Mastercard Incorporated",
+                    "AMERICAN EXPRESS": "American Express Company",
+                    "DISCOVERY": "Discover Financial Services",
+                }
+                bank_name = CARDS.get(card_account)
+                account_type = "Credit Card" if card_type == "Crédito" else "Debit Card"
+                account_number = row.get(self.config.bank_account_mapping[0]["card_number"])[-4:]
+            
+            acc_key = (
+                account_type,
+                bank_name,
+                account_number
+            )
+            
+            if all(acc_key) and any(s.strip() for s in acc_key if isinstance(s, str)):
+                if acc_key not in self._account_cache:
+                    target_name = None
+                    bank_account = BankAccount.from_row(row, *self.config.bank_account_mapping, customer_name=customer.name, account_type=account_type, bank_name=bank_name)
+                    self._account_cache[addr_key] = bank_account
+                    pincode = row.get(self.config.bank_account_mapping[0]["pincode"])
+                    
+                    if pincode:
+                        address = next((a for a in self._address_cache.values() if a.code ==  str(pincode)), None)
 
-
+                        if address:
+                            from api import client
+                            client.doUpdateLinks(
+                                "Address",
+                                address.name,
+                                [
+                                    {
+                                        "link_doctype": "Bank Account",
+                                        "link_name": bank_account.name,
+                                    },
+                                ],
+                            )
+                        
+                    if owner:
+                        [chunk] = parser.process_text(owner)
+                        target_name = chunk.get("matched")
+                        contact = next((c for c in contacts if c.name.startswith(target_name)), None)
+                        
+                        if contact:
+                            from api import client
+                            client.doUpdateLinks(
+                                "Contact",
+                                contact.name,
+                                [
+                                    {
+                                        "link_doctype": "Bank Account",
+                                        "link_name": bank_account.name,
+                                    },
+                                ],
+                            )
+                    
             # 2.5) Crear SalesOrder
             SalesOrder.from_row(
                 row,

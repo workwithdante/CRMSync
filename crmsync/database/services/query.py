@@ -24,7 +24,7 @@ class QueryService:
         result = uow.execute(text("SELECT VERSION();"))
         return result.fetchone()[0]
 
-    def fetch_records(self, uow, offset_contacts: int = 2560, limit_contacts: int = 2000) -> DataFrame:
+    def fetch_records(self, uow, offset_contacts: int = 1, limit_contacts: int = 1) -> DataFrame:
         # ----------- 0) JOIN definitions -----------
         joins = [
             (VTigerSalesOrder, VTigerSalesOrderCF.salesorderid == VTigerSalesOrder.salesorderid),

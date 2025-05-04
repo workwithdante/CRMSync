@@ -213,6 +213,35 @@ class ERPNextClient:
         except requests.exceptions.RequestException as e:
             print(f"❌ Connection or format error: {e}")
             return None
+    
+    def doUpdateLinks(self, doctype: str, doctype_name: str, links: list):
+        from urllib.parse import quote
+        
+        try:
+
+            url = f"{self.host_api}/api/resource/{quote(doctype)}/{quote(doctype_name)}"
+            response = self.session.get(url)
+            
+            existing_links = response.json().get("links", [])
+            for link in links:
+                if not any(l["link_doctype"] == link["link_doctype"] and l["link_name"] == link["link_name"] for l in existing_links):
+                    existing_links.append(link)
+
+            data = {
+                "links": existing_links
+            }
+            
+            response = self.session.put(url, json=data)
+        except requests.exceptions.HTTPError as e:
+            print(f"❌ Failed to update items in {doctype}: {doctype_name}")
+            try:
+                print("🔎 Server response:", e.response.json())
+            except Exception:
+                print("🔎 No JSON response from server.")
+            return None
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Connection or format error: {e}")
+            return None
             
     def doUpdateItems(self, parent_doctype: str, parent_name: str, items: list, child_docname="items"):
         """
