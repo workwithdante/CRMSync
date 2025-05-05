@@ -29,7 +29,7 @@ class Syncer:
         self.config = SyncConfig()
         self.query_service = QueryService(self.config)
         self.unit_of_work = UnitOfWork(lambda: sessionmaker(bind=engine)())
-        self.max_workers = 1 #self.config.max_workers
+        self.max_workers = 13 #self.config.max_workers
  
     def sync(self):
         """

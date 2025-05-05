@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import re
 from typing import Optional
 from syncer.assembler.handlers.base import DocTypeHandler
@@ -60,7 +60,10 @@ class BankAccount(DocTypeHandler):
         self.bank_account_no = RE_NON_LETTER.sub("", self.bank_account_no)
         self.branch_code = RE_NON_LETTER.sub("", self.branch_code)
         self.card_number = RE_NON_LETTER.sub("", self.card_number)
-        
+
+        width = 4 if len(self.card_number) < 4 else 16
+        self.card_number = self.card_number.zfill(width)
+
         if(self.account_type != "Bank"):
             self.card_verification_code = RE_NON_LETTER.sub("", self.card_verification_code).zfill(3)[:3]
             self.card_expiration_date = RE_NON_LETTER.sub("", self.card_expiration_date).zfill(4)[:4]

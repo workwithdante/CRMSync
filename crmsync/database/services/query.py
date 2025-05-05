@@ -36,7 +36,7 @@ class QueryService:
         result = uow.execute(text("SELECT VERSION();"))
         return result.fetchone()[0]
 
-    def fetch_records(self, uow, offset_contacts: int = 1, limit_contacts: int = 1000) -> DataFrame:
+    def fetch_records(self, uow, offset_contacts: int = 1779, limit_contacts: int = 1000) -> DataFrame:
         """
         Obtiene los registros de la base de datos.
 
@@ -114,7 +114,11 @@ class QueryService:
         q = self.recursive_join(base_q, joins)
 
         # ----------- 4) Filtrar por contactos válidos -----------
-        q = q.filter(VTigerSalesOrder.contactid.in_(contact_ids))
+        q = q.filter(
+            VTigerSalesOrder.contactid.in_(contact_ids),
+            VTigerSalesOrderCF.cf_2141.notin_(['Cancelación','Prospecto']),
+            VTigerSalesOrderCF.cf_2059.isnot(None),
+        )
 
         # ----------- 5) Orden final -----------
         q = q.order_by(

@@ -141,7 +141,12 @@ class SalesOrder(DocTypeHandler):
         """
         
         month_init = datetime.strptime(self.delivery_date, "%Y-%m-%d").month
+        if not self.custom_expiry_date:
+            year_init = datetime.strptime(self.delivery_date, "%Y-%m-%d").year
+            self.custom_expiry_date = f"{year_init}-12-31"
+        
         month_end = datetime.strptime(self.custom_expiry_date, "%Y-%m-%d").month
+
         data =  {
             "customer": self.customer_name,
             "company": 'Sierra Group',

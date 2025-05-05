@@ -1,7 +1,7 @@
 
 from syncer.assembler.core.step import PipelineStep # Importa la clase PipelineStep del módulo syncer.assembler.core.step
 from syncer.assembler.handlers.bank_account import BankAccount # Importa la clase BankAccount del módulo syncer.assembler.handlers.bank_account
-
+import numpy as np
 
 class BankAccountFactory(PipelineStep):
     """
@@ -42,7 +42,7 @@ class BankAccountFactory(PipelineStep):
         # Obtiene el número de cuenta de la fila
         raw_no   = row.get(m["bank_account_no"]) or ''
         # Si el nombre del banco y el número de cuenta existen
-        if raw_bank and len(raw_no) > 0:
+        if raw_bank and len(raw_no) > 3:
             # Procesa el nombre del banco con el parser
             chunk = self.parser_bank.process_text(raw_bank)[0]
             # Obtiene el nombre del banco del resultado del parser
@@ -83,9 +83,9 @@ class BankAccountFactory(PipelineStep):
                 # Obtiene el código postal de la fila
                 p = row.get(m["pincode"])
                 # Si el código postal existe, agrega un enlace pendiente
-                if p:
+                if p and not np.isnan(p):
                     context.setdefault("pending_links",[]).append(
-                        ("Address", str(p), "Bank Account", ba.name)
+                        ("Address", str(int(p)), "Bank Account", ba.name)
                     )
                 # Obtiene el propietario de la fila
                 owner = row.get(m["owner"])
