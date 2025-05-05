@@ -148,10 +148,10 @@ class DictComparator:
                         print(f"   ↪ Campo '{field}': '{old}' → '{new}'")
                 return True
 
-        for e_item in existing_cleaned:
-            if e_item not in new_cleaned:
-                print(f"➖ To remove: {tuple(e_item.values())} (x1)")
-                return True
+        #for e_item in existing_cleaned:
+        #    if e_item not in new_cleaned:
+        #        print(f"➖ To remove: {tuple(e_item.values())} (x1)")
+        #        return True
 
         return False
   

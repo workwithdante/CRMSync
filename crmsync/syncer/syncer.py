@@ -1,6 +1,6 @@
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
-from syncer.assembler.policy_assembler import PolicyAssembler
+from syncer.assembler.policy import PolicyAssembler
 from syncer.assembler.resolvers.simple_name import SimpleNameResolver
 from tqdm import tqdm
 

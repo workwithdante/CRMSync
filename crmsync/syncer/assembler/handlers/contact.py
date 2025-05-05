@@ -158,7 +158,7 @@ class Contact(DocTypeHandler):
         }
         # Si la relación no es Owner o Spouse, mapea la relación a un valor estándar
         if self.relationship not in ("Owner", "Spouse"):
-            self.relationship = mapping.get(self.relationship, "Other Relative")
+            self.relationship = mapping.get(self.relationship, "Other Relative (including by marriage and adoption)")
 
     def _normalize_questions(self):
         """

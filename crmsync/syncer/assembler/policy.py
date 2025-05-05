@@ -13,9 +13,9 @@ from tqdm import tqdm
 
 class PolicyAssembler:
     """
-    Ensamblador de políticas.
+    Ensamblador de pólizas.
 
-    Esta clase se encarga de ensamblar las políticas para un contacto,
+    Esta clase se encarga de ensamblar las pólizas para un contacto,
     coordinando la creación de objetos y el establecimiento de relaciones
     entre ellos.
     """
@@ -36,30 +36,30 @@ class PolicyAssembler:
         self.parser_bank    = parser_bank
         # instanciar resolvers y steps
         self.customer_factory   = CustomerFactory(config.customer_mapping)
+        self.bank_account_factory = BankAccountFactory(config.bank_account_mapping, parser_bank)
         self.address_factory    = AddressFactory(config.address_mapping[0])
         self.contact_factory    = ContactFactory(config.contact_mapping)
         self.item_factory       = ItemFactory(config.item_mapping)
-        self.bank_account_factory = BankAccountFactory(config.bank_account_mapping, parser_bank)
         self.sales_order_factory  = SalesOrderFactory()
         self.document_linker    = DocumentLinker(self.parser_person)
         self.contact_linker     = ContactLinker(self.parser_person)
-        self.address_linker     = AddressLinker()
+        #self.address_linker     = AddressLinker()
 
         self.pipeline = Pipeline([
             self.customer_factory,
+            self.bank_account_factory,
             self.address_factory,
             self.contact_factory,
             self.item_factory,
             self.document_linker,
-            self.bank_account_factory,
             self.sales_order_factory,
             self.contact_linker,
-            self.address_linker,
+            #self.address_linker,
         ])
 
     def assemble(self, contact_id: str, rows):
         """
-        Ensambla las políticas para un contacto.
+        Ensambla las pólizas para un contacto.
 
         Este método toma un ID de contacto y una lista de filas de datos,
         y ejecuta el pipeline para crear y relacionar los objetos correspondientes.

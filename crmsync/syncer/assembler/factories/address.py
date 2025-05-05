@@ -33,6 +33,10 @@ class AddressFactory(PipelineStep):
         row = context["row"]
         # Obtiene el cliente del contexto
         customer = context["customer"]
+
+        # Obtiene la cuenta bancaria del contexto
+        bank_account = context["bank_account"]
+
         # Define la clave para el cache
         key = (
             row.get(self.mapping["street"]),
@@ -49,8 +53,14 @@ class AddressFactory(PipelineStep):
                 # Obtiene la dirección del cache
                 address = self.cache[key]
             else:
+                optional = {
+                    "customer_name": customer.name if customer is not None else None,
+                    "bank_account_name": bank_account.name if bank_account is not None else None,
+                }
+                filtered_kwargs = {k: v for k, v in optional.items() if v is not None}
+
                 # Crea una nueva instancia de Address
-                address = Address.from_row(row, self.mapping, customer_name=customer.name)
+                address = Address.from_row(row, self.mapping, **filtered_kwargs)
                 # Agrega la dirección al cache
                 self.cache[key] = address
         # Agrega la dirección al contexto

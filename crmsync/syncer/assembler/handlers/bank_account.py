@@ -85,9 +85,9 @@ class BankAccount(DocTypeHandler):
         Obtiene el nombre existente de la cuenta bancaria.
         """
         if self.account_type == "Bank":
-            return f"{self.bank_account_no[:4]} - {self.bank_name.split(' ')[0]} - {self.customer_name}"
+            return f"{self.bank_account_no[-4:]} - {self.bank_name.split(' ')[0]} - {self.customer_name}"
         else:
-            return f"{self.card_number[:4]} - {self.bank_name.split(' ')[0]} - {self.customer_name}"
+            return f"{self.card_number[-4:]} - {self.bank_name.split(' ')[0]} - {self.customer_name}"
 
     def build_data(self):
         """
@@ -98,7 +98,7 @@ class BankAccount(DocTypeHandler):
             "bank": self.bank_name,
             "party_type": "Customer",
             "party": self.customer_name,
-            "account_type": self.account_type
+            "account_type": self.account_type,
         }
         
         if self.account_type == "Bank":

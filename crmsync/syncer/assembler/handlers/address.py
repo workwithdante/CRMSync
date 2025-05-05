@@ -12,6 +12,7 @@ class Address(DocTypeHandler):
     Esta clase se encarga de manejar la lógica para la dirección.
     """
     customer_name: str
+    bank_account_name: str
     street: str
     pobox: str
     city: str
@@ -21,7 +22,7 @@ class Address(DocTypeHandler):
     country: str = "United States"
     
     @classmethod
-    def from_row(cls, row, mapping, customer_name):
+    def from_row(cls, row, mapping, customer_name=None, bank_account_name=None):
         """
         Crea una instancia de la clase desde una fila de datos.
 
@@ -32,6 +33,7 @@ class Address(DocTypeHandler):
         """
         return cls(
             customer_name=customer_name,
+            bank_account_name=bank_account_name,
             street=row.get(mapping["street"]),
             pobox=row.get(mapping["pobox"]),
             city=row.get(mapping["city"]),
@@ -95,11 +97,19 @@ class Address(DocTypeHandler):
             "state": self.state,
             "pincode": self.code,
             "country": self.country,
-            "links": [{
+        }
+
+        if self.customer_name:
+            data.setdefault("links", []).append({
                 "link_doctype": "Customer",
                 "link_name": self.customer_name,
-            }]
-        }
+            })
+
+        if self.bank_account_name:
+            data.setdefault("links", []).append({
+                "link_doctype": "Bank Account",
+                "link_name": self.bank_account_name,
+            })
         if self.complement:
             data["address_line2"] = self.complement
         return data
