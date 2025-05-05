@@ -160,7 +160,7 @@ class SalesOrder(DocTypeHandler):
                     "item_name": self.item_name,
                     "uom": "Nos",                
                     "conversion_factor": 1.0,    
-                    "qty": (month_end + 1) - month_init,
+                    "qty": float(round((month_end + 1) - month_init, 2)),
                     "rate": float(self.rate) if self.rate else 0.0,
                 },
             ],
