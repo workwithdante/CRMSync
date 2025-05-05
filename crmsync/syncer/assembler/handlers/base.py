@@ -168,7 +168,7 @@ class DocTypeHandler(ABC):
             changes = comparator.compare_dicts(new_data, existing)
 
             if changes != {}:
-                if list(changes.keys()) == ["items"]:
+                if list(changes.keys()) == ["items"] and existing["status"] != 'Draft':
                     client.doUpdateItems(
                         parent_doctype=self.doctype,
                         parent_name=existing["name"],

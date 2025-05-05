@@ -221,17 +221,18 @@ class ERPNextClient:
 
             url = f"{self.host_api}/api/resource/{quote(doctype)}/{quote(doctype_name)}"
             response = self.session.get(url)
-            
-            existing_links = response.json().get("links", [])
-            for link in links:
-                if not any(l["link_doctype"] == link["link_doctype"] and l["link_name"] == link["link_name"] for l in existing_links):
-                    existing_links.append(link)
+                        
+            if existing_doctype := response.json().get("data"):
+                existing_links = existing_doctype.get("links", [])
+                for link in links:
+                    if not any(l["link_doctype"] == link["link_doctype"] and l["link_name"] == link["link_name"] for l in existing_links):
+                        existing_links.append(link)
 
-            data = {
-                "links": existing_links
-            }
-            
-            response = self.session.put(url, json=data)
+                data = {
+                    "links": existing_links
+                }
+                
+                response = self.session.put(url, json=data)
         except requests.exceptions.HTTPError as e:
             print(f"❌ Failed to update items in {doctype}: {doctype_name}")
             try:

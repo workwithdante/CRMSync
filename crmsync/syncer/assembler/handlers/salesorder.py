@@ -139,6 +139,9 @@ class SalesOrder(DocTypeHandler):
         """
         Construye los datos para la orden de venta.
         """
+        
+        month_init = datetime.strptime(self.delivery_date, "%Y-%m-%d").month
+        month_end = datetime.strptime(self.custom_expiry_date, "%Y-%m-%d").month
         data =  {
             "customer": self.customer_name,
             "company": 'Sierra Group',
@@ -157,7 +160,7 @@ class SalesOrder(DocTypeHandler):
                     "item_name": self.item_name,
                     "uom": "Nos",                
                     "conversion_factor": 1.0,    
-                    "qty": 1.0,
+                    "qty": (month_end + 1) - month_init,
                     "rate": float(self.rate) if self.rate else 0.0,
                 },
             ],
