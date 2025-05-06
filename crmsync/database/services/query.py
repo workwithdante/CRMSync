@@ -36,7 +36,7 @@ class QueryService:
         result = uow.execute(text("SELECT VERSION();"))
         return result.fetchone()[0]
 
-    def fetch_records(self, uow, offset_contacts: int = 1779, limit_contacts: int = 1000) -> DataFrame:
+    def fetch_records(self, uow, offset_contacts: int = 0, limit_contacts: int = 1000) -> DataFrame:
         """
         Obtiene los registros de la base de datos.
 
